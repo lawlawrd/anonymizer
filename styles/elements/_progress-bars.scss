@@ -1,0 +1,140 @@
+@use "../colors" as *;
+@use "../variables" as *;
+@use "sass:color";
+
+$progress-stripe-size: 45px;
+
+@mixin progressMixin($progressBarOne, $progressBarTwo) {
+  background-color: $mantle;
+  border: 1px solid $crust;
+
+  &::-moz-progress-bar {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      $progressBarOne,
+      $progressBarOne 1rem,
+      $progressBarTwo 1rem,
+      $progressBarTwo 2rem
+    );
+  }
+
+  &::-webkit-progress-value {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      $progressBarOne,
+      $progressBarOne 1rem,
+      $progressBarTwo 1rem,
+      $progressBarTwo 2rem
+    );
+  }
+}
+
+progress {
+  @include progressMixin($blue3, color.adjust($blue3, $lightness: 5%));
+
+  display: inline-block;
+  width: 100%;
+  padding: 3px;
+  height: calc($lineHeight + 10px);
+  border-radius: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+
+  &:not([value])::-moz-progress-bar {
+    background-color: transparent;
+  }
+
+  &::-moz-progress-bar {
+    background-size: $progress-stripe-size $progress-stripe-size;
+    animation: progressAnimation 1s linear infinite;
+    border-radius: 2px;
+  }
+
+  &::-webkit-progress-value {
+    background-size: $progress-stripe-size $progress-stripe-size;
+    animation: progressAnimation 1s linear infinite;
+    border-radius: 2px;
+  }
+
+  &.rosewater {
+    @include progressMixin(
+      $rosewater3,
+      color.adjust($rosewater3, $lightness: 5%)
+    );
+  }
+
+  &.flamingo {
+    @include progressMixin(
+      $flamingo3,
+      color.adjust($flamingo3, $lightness: 5%)
+    );
+  }
+
+  &.pink {
+    @include progressMixin($pink3, color.adjust($pink3, $lightness: 5%));
+  }
+
+  &.mauve {
+    @include progressMixin($mauve3, color.adjust($mauve3, $lightness: 5%));
+  }
+
+  &.red {
+    @include progressMixin($red3, color.adjust($red3, $lightness: 5%));
+  }
+
+  &.maroon {
+    @include progressMixin($maroon3, color.adjust($maroon3, $lightness: 5%));
+  }
+
+  &.peach {
+    @include progressMixin($peach3, color.adjust($peach3, $lightness: 5%));
+  }
+
+  &.yellow {
+    @include progressMixin($yellow3, color.adjust($yellow3, $lightness: 5%));
+  }
+
+  &.green {
+    @include progressMixin($green3, color.adjust($green3, $lightness: 5%));
+  }
+
+  &.teal {
+    @include progressMixin($teal3, color.adjust($teal3, $lightness: 5%));
+  }
+
+  &.sky {
+    @include progressMixin($sky3, color.adjust($sky3, $lightness: 5%));
+  }
+
+  &.sapphire {
+    @include progressMixin(
+      $sapphire3,
+      color.adjust($sapphire3, $lightness: 5%)
+    );
+  }
+
+  &.blue {
+    @include progressMixin($blue3, color.adjust($blue3, $lightness: 5%));
+  }
+
+  &.lavender {
+    @include progressMixin(
+      $lavender3,
+      color.adjust($lavender3, $lightness: 5%)
+    );
+  }
+
+  &.gray {
+    @include progressMixin($subtext0, $overlay2);
+  }
+}
+
+@keyframes progressAnimation {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: -$progress-stripe-size 0;
+  }
+}

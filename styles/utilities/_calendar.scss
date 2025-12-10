@@ -1,0 +1,157 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+.calendar {
+  .calendar-controls {
+    display: flex;
+    grid-row: 1 / 2;
+
+    & > .spacer {
+      flex-grow: 99;
+    }
+  }
+
+  .calendar-wrapper {
+    display: grid;
+    overflow: hidden;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    padding-top: 2px;
+
+    .calendar-month {
+      grid-column: 1 / 2;
+      grid-row: 1 / 2;
+      transform: translateX(0);
+      transition: transform 0.3s;
+      display: grid;
+      grid-template-columns: repeat(7, 2fr);
+      max-width: calc(100% - 1px);
+
+      &.incoming-left,
+      &.outgoing-left {
+        transform: translateX(-100%);
+      }
+
+      &.incoming-right,
+      &.outgoing-right {
+        transform: translateX(100%);
+      }
+
+      .weekday-name {
+        font-family: $utilityText;
+        font-weight: 800;
+        color: rgba($text, 0.4);
+        text-align: center;
+        text-transform: uppercase;
+        border-width: 1px 1px 0 0;
+        border-style: solid;
+        border-color: $surface1;
+
+        &:first-child {
+          border-left-width: 1px;
+        }
+      }
+
+      .calendar-day {
+        min-height: 10em;
+        position: relative;
+        border-width: 1px 1px 0 0;
+        border-style: solid;
+        border-color: $surface1;
+        background-color: $base;
+        padding: 2.3em 0.3em 0.3em;
+        min-width: 0;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+
+        .spacer {
+          flex-grow: 99;
+        }
+
+        &:hover {
+          background-color: $surface0;
+        }
+
+        &.weekday-1 {
+          border-left-width: 1px;
+        }
+
+        &.last-week {
+          border-bottom-width: 1px;
+        }
+
+        .date-number {
+          font-size: 1em;
+          font-family: $utilityText;
+          position: absolute;
+          top: 0.25em;
+          left: 0.5em;
+          opacity: 0.7;
+        }
+
+        &.other-month .date-number {
+          opacity: 0.25;
+        }
+
+        &.today {
+          box-shadow: 0 8px 0 0 $linkColor inset;
+
+          .date-number {
+            transform: translateY(4px);
+            font-weight: 700;
+          }
+        }
+
+        .calendar-event-wrapper {
+          // margin-bottom: 1em;
+
+          .calendar-event {
+            display: block;
+            font-size: 0.9em;
+            margin-bottom: 0.2em;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            text-decoration: none;
+            cursor: pointer;
+            border-radius: 0;
+            padding: 0;
+          }
+
+          & > .panel {
+            min-width: 50ch;
+            padding-left: 4em;
+            color: $text;
+            padding-bottom: 2em;
+
+            &.left {
+              transform: translate(-4em, 0);
+
+              &:after {
+                left: calc(3.6em - 0.6em);
+              }
+            }
+
+            &.right {
+              transform: translate(calc(-100% + 3em), 0);
+
+              &:after {
+                right: calc(3.6em - 0.6em);
+              }
+            }
+
+            & > .tag {
+              position: absolute;
+              left: 1.7rem;
+              top: 1rem;
+              font-size: 0.9em;
+              transform: translateX(-50%);
+            }
+          }
+        }
+      }
+    }
+  }
+}

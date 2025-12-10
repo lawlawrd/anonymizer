@@ -1,0 +1,66 @@
+@use "./colors" as *;
+@use "sass:color";
+
+/* TYPOGRAPHY */
+$blockText: "IBM Plex Serif", Georgia, serif;
+$utilityText: "IBM Plex Sans", Calibri, Arial, Verdana, sans-serif;
+$monoText: "IBM Plex Mono", monospace;
+
+$fontFamily: $blockText;
+$fontSize: 15px;
+$lineHeight: $fontSize * 1.4;
+$paragraphSpacer: $lineHeight * 0.75;
+
+/* HEADER */
+$headerBackground: $mantle;
+$headerText: $text;
+$headerLine: $crust;
+$headerHeight: 55px;
+
+/* LINKS */
+$linkColor: $blue3;
+$linkLine: $sky3;
+$linkHover: $text;
+$linkActive: $text;
+$linkVisited: $mauve3;
+
+/* INPUT */
+$inputFontSize: 1em;
+$inputHeight: 2.6em;
+$inputPaddingWidth: 0.6em;
+$inputPaddingHeight: 0;
+$inputPadding: $inputPaddingHeight $inputPaddingWidth;
+$inputBackground: $base;
+$inputBackgroundDisabled: $surface1;
+$inputText: $text;
+$inputVague: $subtext0;
+$inputLine: $surface2;
+$inputLineHover: color.adjust($sky3, $lightness: -8%);
+$inputLineFocus: color.adjust($sky3, $lightness: -5%);
+$inputLineActive: $sky3;
+$inputLineError: $red3;
+
+/* BUTTONS */
+$buttonFontSize: 1em;
+$buttonHeight: 2.6em;
+$buttonPadding: 0 1.2em 5px;
+$buttonShadowSize: 3px;
+$buttonBackground: $surface0;
+$buttonText: $text;
+$buttonTextDisabled: $overlay2;
+$buttonLine: $overlay1;
+$buttonHover: $surface1;
+$buttonFocus: $surface1;
+$buttonActive: $overlay0;
+$buttonDisabled: $overlay0;
+$buttonShadow: $overlay1;
+$buttonPulseHigh: $overlay1;
+$buttonPulseLow: $surface0;
+$buttonRefresh: url(../images/refresh-black.svg);
+$buttonCheck: url(../images/check-black.svg);
+
+/* MARK */
+$markBackground: color.adjust($yellow2, $alpha: -0.3);
+$markBackgroundAlt: color.adjust($yellow1, $alpha: -0.1);
+
+$chevronHover: url(/images/chevron-down-blue.svg);

@@ -1,0 +1,339 @@
+@use "../colors" as *;
+@use "../variables" as *;
+@use "sass:color";
+
+@mixin tagMixin($tagText, $tagBackground, $tagHover, $tagIcon) {
+  color: $tagText;
+  background-color: $tagBackground;
+
+  & > .icon {
+    fill: $tagIcon;
+  }
+
+  &:hover,
+  &.hover {
+    color: $tagText;
+    background-color: $tagHover;
+
+    & > .icon {
+      fill: $tagText;
+    }
+  }
+}
+
+.tag {
+  @include tagMixin($text, $surface1, $surface1, $subtext0);
+
+  font-family: $utilityText;
+  font-weight: 200;
+  display: inline-block;
+  border-radius: 3px;
+  padding: 0em 0.4em;
+  font-size: 0.7em;
+  line-height: 1.7em;
+  position: relative;
+  top: -0.1em;
+  text-decoration: none;
+
+  &.badge {
+    min-width: 1.8em;
+    height: 1.8em;
+    line-height: 1.8em;
+    text-align: center;
+    border-radius: 0.9em 0.9em;
+    padding: 0 0.3em;
+  }
+
+  & > .icon {
+    width: 1.3em;
+    height: 1.3em;
+    transform: translateY(0.25em);
+  }
+
+  &:hover,
+  &.hover,
+  &:active,
+  &:visited,
+  &:focus {
+    text-decoration: none;
+  }
+
+  &.alt {
+    @include tagMixin(
+      $white,
+      $overlay1,
+      $overlay2,
+      color.adjust($white, $lightness: -15%)
+    );
+  }
+
+  &.rosewater {
+    @include tagMixin(
+      $white,
+      $rosewater3,
+      color.adjust($rosewater3, $lightness: -5%),
+      $rosewater2
+    );
+  }
+
+  &.flamingo {
+    @include tagMixin(
+      $white,
+      $flamingo3,
+      color.adjust($flamingo3, $lightness: -5%),
+      $flamingo2
+    );
+  }
+
+  &.pink {
+    @include tagMixin(
+      $white,
+      $pink3,
+      color.adjust($pink3, $lightness: -5%),
+      $pink2
+    );
+  }
+
+  &.mauve {
+    @include tagMixin(
+      $white,
+      $mauve3,
+      color.adjust($mauve3, $lightness: -5%),
+      $mauve2
+    );
+  }
+
+  &.purple {
+    @include tagMixin($white, #9933ff, #a64dff, #e6ccff);
+  }
+
+  &.red {
+    @include tagMixin(
+      $white,
+      $red3,
+      color.adjust($red3, $lightness: -5%),
+      $red2
+    );
+  }
+
+  &.maroon {
+    @include tagMixin(
+      $white,
+      $maroon3,
+      color.adjust($maroon3, $lightness: -5%),
+      $maroon2
+    );
+  }
+
+  &.peach {
+    @include tagMixin(
+      $white,
+      $peach3,
+      color.adjust($peach3, $lightness: -5%),
+      $peach2
+    );
+  }
+
+  &.orange {
+    @include tagMixin($white, #d35400, #e65c00, #ffa366);
+  }
+
+  &.yellow {
+    @include tagMixin(
+      $white,
+      $yellow3,
+      color.adjust($yellow3, $lightness: -5%),
+      $yellow2
+    );
+  }
+
+  &.green {
+    @include tagMixin(
+      $white,
+      $green3,
+      color.adjust($green3, $lightness: -5%),
+      $green2
+    );
+  }
+
+  &.teal {
+    @include tagMixin(
+      $white,
+      $teal3,
+      color.adjust($teal3, $lightness: -5%),
+      $teal2
+    );
+  }
+
+  &.sky {
+    @include tagMixin(
+      $white,
+      $sky3,
+      color.adjust($sky3, $lightness: -5%),
+      $sky2
+    );
+  }
+
+  &.sapphire {
+    @include tagMixin(
+      $white,
+      $sapphire3,
+      color.adjust($sapphire3, $lightness: -5%),
+      $sapphire2
+    );
+  }
+
+  &.blue {
+    @include tagMixin(
+      $white,
+      $blue3,
+      color.adjust($blue3, $lightness: -5%),
+      $blue2
+    );
+  }
+
+  &.lavender {
+    @include tagMixin(
+      $white,
+      $lavender3,
+      color.adjust($lavender3, $lightness: -5%),
+      $lavender2
+    );
+  }
+
+  &.navy {
+    @include tagMixin(
+      $white,
+      $navy,
+      color.adjust($navy, $lightness: 5%),
+      color.adjust($navy, $lightness: 50%)
+    );
+  }
+
+  &.olive {
+    @include tagMixin(
+      $white,
+      $olive,
+      color.adjust($olive, $lightness: 5%),
+      color.adjust($olive, $lightness: 15%)
+    );
+  }
+
+  &.salmon {
+    @include tagMixin(
+      $white,
+      $salmon,
+      color.adjust($salmon, $lightness: 5%),
+      color.adjust($salmon, $lightness: 15%)
+    );
+  }
+
+  &.magenta {
+    @include tagMixin(
+      $white,
+      $magenta,
+      color.adjust($magenta, $lightness: 5%),
+      color.adjust($magenta, $lightness: 35%)
+    );
+  }
+
+  &.cyan {
+    @include tagMixin(
+      $black,
+      $cyan,
+      color.adjust($cyan, $lightness: 5%),
+      color.adjust($cyan, $lightness: -15%)
+    );
+  }
+
+  &.lightgray {
+    @include tagMixin(
+      $black,
+      $lightgray,
+      color.adjust($lightgray, $lightness: 5%),
+      color.adjust($lightgray, $lightness: -25%)
+    );
+  }
+
+  &.darkgray {
+    @include tagMixin(
+      $white,
+      $darkgray,
+      color.adjust($darkgray, $lightness: 5%),
+      color.adjust($darkgray, $lightness: 25%)
+    );
+  }
+
+  &.chocolate {
+    @include tagMixin(
+      $white,
+      $chocolate,
+      color.adjust($chocolate, $lightness: 5%),
+      color.adjust($chocolate, $lightness: 15%)
+    );
+  }
+
+  &.black {
+    @include tagMixin(
+      $white,
+      $black,
+      color.adjust($black, $lightness: 5%),
+      color.adjust($black, $lightness: 50%)
+    );
+  }
+
+  &.forest {
+    @include tagMixin(
+      $white,
+      $forest,
+      color.adjust($olive, $lightness: 5%),
+      color.adjust($forest, $lightness: 15%)
+    );
+  }
+
+  &.royal {
+    @include tagMixin(
+      $white,
+      $royal,
+      color.adjust($royal, $lightness: 5%),
+      color.adjust($royal, $lightness: 15%)
+    );
+  }
+
+  &.lemon {
+    @include tagMixin(
+      $black,
+      $lemon,
+      color.adjust($lemon, $lightness: 5%),
+      color.adjust($lemon, $lightness: -30%)
+    );
+  }
+}
+
+h2 .tag {
+  font-size: 1.25rem;
+  border-radius: 6px;
+}
+
+h3 .tag {
+  font-size: 1.25rem;
+  border-radius: 5px;
+}
+
+h4 .tag {
+  font-size: 1rem;
+  border-radius: 4px;
+}
+
+h5 .tag {
+  font-size: 0.7rem;
+}
+
+h6 .tag {
+  font-size: 0.7rem;
+  line-height: 1.7em;
+}
+
+a.tag {
+  cursor: pointer;
+}

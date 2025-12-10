@@ -1,0 +1,78 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+table,
+.table {
+  text-align: justify;
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+  max-width: 100%;
+  margin: $paragraphSpacer 0;
+  font-family: $utilityText;
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.5em;
+    vertical-align: top;
+    border-top: 1px solid $crust;
+
+    & > p {
+      margin: 0;
+    }
+  }
+
+  tr:hover > td {
+    background-color: $mantle;
+  }
+
+  thead th {
+    border-top-width: 0;
+    border-bottom: 2px solid $crust;
+  }
+
+  tfoot th {
+    border-top: 2px solid $crust;
+  }
+
+  &.bordered {
+    td,
+    th {
+      border: 1px solid $crust;
+    }
+
+    thead th {
+      border-bottom: 2px solid $crust;
+    }
+
+    tfoot th {
+      border-top: 2px solid $crust;
+    }
+  }
+
+  &.striped {
+    tbody tr:nth-of-type(odd) td {
+      background-color: $mantle;
+    }
+
+    tbody tr:hover:nth-of-type(even) > td {
+      background-color: $surface2;
+    }
+
+    tbody tr:hover:nth-of-type(odd) > td {
+      background-color: $surface2;
+    }
+  }
+
+  &.outlined {
+    border: 1px solid $crust;
+  }
+
+  &.dense {
+    th,
+    td {
+      padding: 0.35em 0.5em;
+    }
+  }
+}

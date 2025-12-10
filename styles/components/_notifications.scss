@@ -1,0 +1,205 @@
+@use "../colors" as *;
+@use "../variables" as *;
+@use "sass:color";
+
+@mixin notificationMixin(
+  $notificationBackground,
+  $notificationBorder,
+  $notificationText,
+  $notificationHeader
+) {
+  background-color: $notificationBackground;
+  color: $notificationText;
+  border: 1px solid $notificationBorder;
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: rgba($notificationHeader, 0.6);
+  }
+
+  & > svg.icon {
+    fill: rgba($notificationHeader, 0.6);
+  }
+
+  .control.close {
+    cursor: pointer;
+
+    svg {
+      fill: rgba($notificationHeader, 0.6);
+    }
+
+    &:hover svg,
+    &:focus svg {
+      fill: $notificationHeader;
+    }
+  }
+}
+
+.notification {
+  @include notificationMixin($overlay2, $subtext0, $white, $white);
+
+  margin: $paragraphSpacer 0;
+  padding: 0 4rem 0 2rem;
+  border-radius: 6px;
+  position: relative;
+  overflow: auto;
+
+  & > svg.icon {
+    width: 4em;
+    height: 4em;
+    float: left;
+    margin: 1em 1em 1em 0;
+  }
+
+  .control.close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+
+    svg {
+      width: 1.7rem;
+      height: 1.7rem;
+    }
+  }
+
+  &.sticky {
+    position: relative;
+    border-width: 0 0 1px 0;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  &.rosewater {
+    @include notificationMixin(
+      $rosewater3,
+      color.adjust($rosewater3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.flamingo {
+    @include notificationMixin(
+      $flamingo3,
+      color.adjust($flamingo3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.pink {
+    @include notificationMixin(
+      $pink3,
+      color.adjust($pink3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.mauve {
+    @include notificationMixin(
+      $mauve3,
+      color.adjust($mauve3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.red {
+    @include notificationMixin(
+      $red3,
+      color.adjust($red3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.maroon {
+    @include notificationMixin(
+      $maroon3,
+      color.adjust($maroon3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.peach {
+    @include notificationMixin(
+      $peach3,
+      color.adjust($peach3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.yellow {
+    @include notificationMixin(
+      $yellow3,
+      color.adjust($yellow3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.green {
+    @include notificationMixin(
+      $green3,
+      color.adjust($green3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.teal {
+    @include notificationMixin(
+      $teal3,
+      color.adjust($teal3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.sky {
+    @include notificationMixin(
+      $sky3,
+      color.adjust($sky3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.sapphire {
+    @include notificationMixin(
+      $sapphire3,
+      color.adjust($sapphire3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.blue {
+    @include notificationMixin(
+      $blue3,
+      color.adjust($blue3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.lavender {
+    @include notificationMixin(
+      $lavender3,
+      color.adjust($lavender3, $lightness: -5%),
+      $white,
+      $white
+    );
+  }
+
+  &.gray {
+    @include notificationMixin($subtext0, $subtext1, $white, $white);
+  }
+}

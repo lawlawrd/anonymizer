@@ -1,0 +1,215 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+@mixin siteOverviewMixin(
+  $soIcon,
+  $soHeader,
+  $soBorder,
+  $soBackground,
+  $soActiveText
+) {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-decoration: underline solid $soHeader;
+  }
+
+  u {
+    text-decoration: underline solid $soHeader;
+  }
+
+  & > ul > li > a {
+    & > .title {
+      color: $text;
+      text-decoration: underline solid $soIcon;
+    }
+
+    & > .icon {
+      fill: $soIcon;
+    }
+
+    &:hover {
+      & > .title {
+        text-decoration: underline solid $soHeader;
+      }
+
+      & > .icon {
+        fill: $soHeader;
+      }
+    }
+
+    &:focus {
+      color: $soActiveText;
+      outline-width: 0;
+      border-color: $soBorder;
+      background-color: $soBackground;
+
+      & > .title {
+        color: $soActiveText;
+        text-decoration: underline solid $soHeader;
+      }
+
+      & > .icon {
+        fill: $soActiveText;
+      }
+
+      & > .description {
+        color: $soActiveText;
+      }
+    }
+
+    &:active {
+      & > .title {
+        color: $text;
+        text-decoration: underline solid $text;
+      }
+    }
+  }
+}
+
+.site-overview {
+  @include siteOverviewMixin($crust, $blue3, $crust, $mantle, $text);
+
+  padding: 2em 1em;
+  margin-bottom: 2em;
+
+  & > .explainer {
+    font-size: 1.1em;
+    line-height: 1.5;
+    padding: 0 25vw 0 0;
+  }
+
+  & > ul {
+    list-style-type: none;
+    margin-left: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+
+    & > li > a {
+      position: relative;
+      padding: 1em 3em 1em 5em;
+      margin: 1em 0;
+      display: block;
+      text-decoration: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+
+      & > .icon {
+        position: absolute;
+        top: 1em;
+        left: 0.5em;
+        width: 3.5em;
+        height: 3.5em;
+      }
+
+      & > .title {
+        font-size: 1.5em;
+        font-family: $utilityText;
+        font-weight: bold;
+        line-height: 1.2;
+        margin-bottom: 0.25em;
+      }
+
+      & > .description {
+        color: $text;
+      }
+
+      &:hover {
+        text-decoration: none;
+      }
+    }
+  }
+
+  @media (min-width: 667px) and (max-width: 900px) {
+    & > .explainer {
+      padding: 0 10vw 0 0;
+    }
+
+    & > ul {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (min-width: 320px) and (max-width: 666px) {
+    & > .explainer {
+      padding: 0;
+    }
+
+    & > ul {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &.yellow {
+    @include siteOverviewMixin(
+      $yellow2,
+      $yellow3,
+      $yellow1,
+      $yellow0,
+      $black
+    );
+  }
+
+  &.red {
+    @include siteOverviewMixin(
+      $red2,
+      $red3,
+      $red1,
+      $red0,
+      $black
+    );
+  }
+
+  &.blue {
+    @include siteOverviewMixin(
+      $blue2,
+      $blue3,
+      $blue1,
+      $blue0,
+      $black
+    );
+  }
+
+  &.green {
+    @include siteOverviewMixin(
+      $green2,
+      $green3,
+      $green1,
+      $green0,
+      $black
+    );
+  }
+
+  &.orange {
+    @include siteOverviewMixin(
+      $peach2,
+      $peach3,
+      $peach1,
+      $peach0,
+      $black
+    );
+  }
+
+  &.purple {
+    @include siteOverviewMixin(
+      $mauve2,
+      $mauve3,
+      $mauve1,
+      $mauve0,
+      $black
+    );
+  }
+
+  &.gray {
+    @include siteOverviewMixin(
+      $overlay2,
+      $subtext0,
+      $overlay1,
+      $overlay0,
+      $black
+    );
+  }
+}

@@ -1,0 +1,130 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+.pagination {
+  list-style-type: none;
+  display: inline-block;
+  font-family: $utilityText;
+  margin: 0 0.4rem 0.4rem 0;
+  padding: 0;
+
+  & > li {
+    display: inline-block;
+
+    & > *:not(.panel) {
+      display: block;
+      background-color: $base;
+      border-width: 1px 0 1px 1px;
+      border-style: solid;
+      border-color: $overlay0;
+      height: $inputHeight;
+      line-height: $inputHeight;
+      color: $blue3;
+      padding: 0 1em;
+      margin: 0 -4px 0 0;
+      text-decoration: none;
+      cursor: pointer;
+
+      &:disabled {
+        color: $subtext0;
+        background-color: $inputBackgroundDisabled;
+      }
+    }
+
+    &:first-child > * {
+      border-radius: 6px 0 0 6px;
+    }
+
+    &:last-child > * {
+      border-radius: 0 6px 6px 0;
+      border-width: 1px 1px 1px 1px;
+    }
+
+    &:first-child:last-child > * {
+      border-radius: 6px;
+    }
+
+    & > a:hover,
+    & > a.hover,
+    & > a:focus,
+    &.focus > a {
+      background-color: $surface1;
+      color: $text;
+    }
+
+    & > a:focus {
+      outline-width: 0;
+      box-shadow: 0 0 0 2px $crust;
+    }
+
+    & > a:active,
+    &.active > * {
+      background-color: $blue3;
+      color: $base;
+      border-color: $blue3;
+    }
+
+    & > * svg {
+      width: 1.6em;
+      height: 1.6em;
+      fill: $blue3;
+      position: relative;
+      top: 0.3em;
+    }
+
+    & > a:hover svg,
+    &.hover > a svg {
+      fill: $text;
+    }
+
+    & > a:active svg,
+    &.active > * svg {
+      fill: $base;
+    }
+
+    & > select {
+      border-radius: 0;
+    }
+  }
+
+  &.rounded li > *,
+  &.bullets li > * {
+    border-width: 1px;
+    min-width: 2.2em;
+    height: 2.2em;
+    line-height: 2em;
+    border-radius: 1.1em 1.1em;
+    margin-left: 0.5em;
+    padding: 0 0.7em;
+    text-align: center;
+  }
+
+  &.bullets {
+    font-size: 0.5em;
+
+    & > li > * {
+      height: 2.2em;
+      width: 1em;
+      line-height: 1em;
+      margin: 0 0.5em;
+      color: transparent;
+      background-color: $surface0;
+      border-color: $surface0;
+      cursor: pointer;
+
+      &:hover,
+      &:focus {
+        color: transparent;
+        background-color: $surface2;
+        border-color: $surface2;
+      }
+    }
+
+    & > li > *:active,
+    & > li.active > * {
+      color: transparent;
+      background-color: $blue3;
+      border-color: $blue3;
+    }
+  }
+}

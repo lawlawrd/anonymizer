@@ -1,0 +1,347 @@
+@use "../colors" as *;
+@use "../variables" as *;
+@use "sass:color";
+
+a,
+.link {
+  color: $linkColor;
+  text-decoration: underline solid $linkLine;
+  -webkit-text-decoration: underline solid $linkLine;
+  // cursor: pointer;
+
+  &.hover,
+  &:hover {
+    color: $linkHover;
+    text-decoration: underline solid $linkLine;
+    -webkit-text-decoration: underline solid $linkLine;
+  }
+
+  &.focus,
+  &:focus {
+    outline-width: 0;
+    color: $linkActive;
+    text-decoration: underline solid $linkLine;
+    -webkit-text-decoration: underline solid $linkLine;
+    outline: 1px dotted $subtext0;
+  }
+
+  &.active,
+  &:active {
+    color: $linkActive;
+    text-decoration: underline solid $text;
+    -webkit-text-decoration: underline solid $text;
+  }
+
+  &.visited,
+  &:visited {
+    color: $linkVisited;
+    text-decoration: underline solid $linkVisited;
+    -webkit-text-decoration: underline solid $linkVisited;
+
+    &.hover,
+    &:hover {
+      color: $linkHover;
+      text-decoration: underline solid $linkVisited;
+      -webkit-text-decoration: underline solid $linkVisited;
+    }
+
+    &.focus,
+    &:focus {
+      outline-width: 0;
+      color: $linkActive;
+      text-decoration: underline solid $linkVisited;
+      -webkit-text-decoration: underline solid $linkVisited;
+      outline: 1px dotted $subtext0;
+    }
+
+    &.active,
+    &:active {
+      color: $linkActive;
+      text-decoration: underline solid $text;
+      -webkit-text-decoration: underline solid $text;
+    }
+  }
+
+  &.button {
+    text-decoration: none;
+    -webkit-text-decoration: none;
+  }
+}
+
+@mixin knobMixin(
+  $knobBackground, 
+  $knobText,
+  $knobHover,
+  $knobActive,
+  $knobActiveText,
+  $knobBorder
+) {
+  background-color: $knobBackground;
+  color: $knobText;
+  border: 1px solid $knobBorder;
+  cursor: pointer;
+
+  &:hover,
+  &.hover {
+    background-color: $knobHover;
+    color: $knobText;
+  }
+
+  &:focus,
+  &.focus {
+    background-color: $knobHover;
+    color: $knobText;
+    border-color: $knobBorder;
+    box-shadow: 0 0 0 2px $knobBorder;
+  }
+
+  &:active,
+  &.active {
+    background-color: $knobActive;
+    border-color: $knobActive;
+    color: $knobActiveText;
+
+    & > .icon {
+      fill: $knobActiveText;
+    }
+  }
+
+  &.disabled,
+  &:disabled {
+    color: rgba($knobText, 0.5);
+  }
+
+  & > .icon {
+    fill: $knobActive;
+  }
+}
+
+.knobs > li > a,
+.knob {
+  @include knobMixin(
+    $base,
+    $text,
+    $surface1,
+    $overlay1,
+    $white,
+    $surface1
+  );
+
+  display: inline-block;
+  font-family: $utilityText;
+  height: $inputHeight;
+  line-height: $inputHeight;
+  padding: 0 1em;
+  margin: 0 0.4rem 0.4rem 0;
+  text-decoration: none;
+  -webkit-text-decoration: none;
+  border-radius: 6px;
+
+  &:hover,
+  &.hover,
+  &:focus,
+  &.focus,
+  &:active,
+  &.active {
+    text-decoration: none;
+    -webkit-text-decoration: none;
+    outline-width: 0;
+  }
+
+  &.disabled,
+  &:disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+
+    & > .icon,
+    & > svg {
+      opacity: 0.5;
+    }
+  }
+
+  & > .icon {
+    transform-origin: center center;
+    transform: scale(1.6, 1.6) translateY(0.1em);
+    margin-right: 0.5em;
+
+    &.last {
+      margin-right: 0;
+    }
+  }
+
+  &.rosewater {
+    @include knobMixin(
+      $rosewater0,
+      $text,
+      $rosewater2,
+      $rosewater3,
+      $white,
+      $rosewater3
+    );
+  }
+
+  &.flamingo {
+    @include knobMixin(
+      $flamingo0,
+      $text,
+      $flamingo2,
+      $flamingo3,
+      $white,
+      $flamingo3
+    );
+  }
+
+  &.pink {
+    @include knobMixin(
+      $pink0,
+      $text,
+      $pink2,
+      $pink3,
+      $white,
+      $pink3
+    );
+  }
+
+  &.mauve {
+    @include knobMixin(
+      $mauve0,
+      $text,
+      $mauve2,
+      $mauve3,
+      $white,
+      $mauve3
+    );
+  }
+
+  &.red {
+    @include knobMixin(
+      $red0,
+      $text,
+      $red2,
+      $red3,
+      $white,
+      $red3
+    );
+  }
+
+  &.maroon {
+    @include knobMixin(
+      $maroon0,
+      $text,
+      $maroon2,
+      $maroon3,
+      $white,
+      $maroon3
+    );
+  }
+
+  &.peach {
+    @include knobMixin(
+      $peach0,
+      $text,
+      $peach2,
+      $peach3,
+      $white,
+      $peach3
+    );
+  }
+
+  &.yellow {
+    @include knobMixin(
+      $yellow0,
+      $text,
+      $yellow2,
+      $yellow3,
+      $white,
+      $yellow3
+    );
+  }
+
+  &.green {
+    @include knobMixin(
+      $green0,
+      $text,
+      $green2,
+      $green3,
+      $white,
+      $green3
+    );
+  }
+
+  &.teal {
+    @include knobMixin(
+      $teal0,
+      $text,
+      $teal2,
+      $teal3,
+      $white,
+      $teal3
+    );
+  }
+
+  &.sky {
+    @include knobMixin(
+      $sky0,
+      $text,
+      $sky2,
+      $sky3,
+      $white,
+      $sky3
+    );
+  }
+
+  &.sapphire {
+    @include knobMixin(
+      $sapphire0,
+      $text,
+      $sapphire2,
+      $sapphire3,
+      $white,
+      $sapphire3
+    );
+  }
+
+  &.blue {
+    @include knobMixin(
+      $blue0,
+      $text,
+      $blue2,
+      $blue3,
+      $white,
+      $blue3
+    );
+  }
+
+  &.lavender {
+    @include knobMixin(
+      $lavender0,
+      $text,
+      $lavender2,
+      $lavender3,
+      $white,
+      $lavender3
+    );
+  }
+
+  &.gray {
+    @include knobMixin(
+      $surface0,
+      $text,
+      $surface2,
+      $overlay0,
+      $white,
+      $overlay0
+    );
+  }
+
+  &.transparent {
+    @include knobMixin(
+      transparent,
+      $text,
+      $surface2,
+      $subtext0,
+      $subtext0,
+      $overlay0
+    );
+  }
+}

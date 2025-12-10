@@ -1,0 +1,736 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+@mixin panelMixin(
+  $panelBackground,
+  $panelBorderColor,
+  $panelLinkColor,
+  $panelHeaderColor,
+  $panelSubnavBorderColor,
+  $panelSubnavLinkColor,
+  $panelHoverBackground,
+  $panelActiveBackground,
+  $panelActiveText
+) {
+  background-color: $panelBackground;
+  border: 1px solid $panelBorderColor;
+  color: $panelLinkColor;
+
+  .seperator {
+    border-color: $panelBorderColor;
+  }
+
+  & > .toggler {
+    &:hover {
+      background-color: $panelHoverBackground;
+    }
+
+    &.active {
+      text-decoration: underline solid $panelHeaderColor;
+    }
+  }
+
+  & > .header,
+  & > header {
+    color: $panelLinkColor;
+    text-decoration: underline solid $panelHeaderColor;
+    -webkit-text-decoration: underline solid $panelHeaderColor;
+
+    & > .icon {
+      fill: $panelActiveBackground;
+    }
+
+    &.tabs {
+      text-decoration: none;
+
+      & > span {
+        opacity: 0.3;
+        cursor: pointer;
+
+        &:hover {
+          opacity: 1;
+        }
+
+        &.active {
+          opacity: 1;
+          text-decoration: underline solid $panelHeaderColor;
+          -webkit-text-decoration: underline solid $panelHeaderColor;
+        }
+      }
+    }
+  }
+
+  a,
+  .link,
+  .subnav > label {
+    color: $panelLinkColor;
+    border: 1px solid transparent;
+
+    & > .icon {
+      fill: $panelSubnavBorderColor;
+    }
+  }
+
+  .hover > a,
+  a:hover,
+  .link:hover,
+  label:hover,
+  .subnav:focus-within:not(.active) > label {
+    background-color: $panelHoverBackground;
+    text-decoration: none;
+    border: 1px solid transparent;
+
+    & > .icon {
+      fill: $panelSubnavLinkColor;
+    }
+  }
+
+  a:focus,
+  .link:focus,
+  label:focus,
+  input[type="checkbox"]:focus + label,
+  input[type="radio"]:focus + label {
+    outline-width: 0;
+    text-decoration: none;
+    background-color: $panelHoverBackground;
+    border: 1px solid $panelBorderColor;
+
+    & > .icon {
+      fill: $panelSubnavLinkColor;
+    }
+  }
+
+  .active > a,
+  .active > .link,
+  .active > label,
+  a.active {
+    color: $panelActiveText;
+    background-color: $panelActiveBackground;
+
+    & > .icon {
+      fill: $panelActiveText;
+    }
+
+    &:focus {
+      color: $panelActiveText;
+      background-color: $panelActiveBackground;
+      border-color: $panelActiveBackground;
+    }
+  }
+
+  .active > input[type="checkbox"]:focus + label {
+    color: $panelActiveText;
+    background-color: $panelActiveBackground;
+    border-color: $panelActiveBackground;
+  }
+
+  .subnav.active > label .icon.chevron,
+  .subnav.active > label:hover .icon.chevron,
+  .subnav.active > label:focus .icon.chevron {
+    fill: $panelActiveText;
+  }
+
+  .subnav > ul {
+    border-left-width: 0;
+
+    & > li > a,
+    & > li > .link {
+      color: $panelSubnavLinkColor;
+    }
+
+    & > li.active > a,
+    & > li.active > .link {
+      color: $panelActiveText;
+    }
+  }
+
+  .subnav > input:checked + label + ul,
+  .subnav:focus-within > ul {
+    border-left: 5px solid $panelSubnavBorderColor;
+  }
+
+  &.arrow:after {
+    background-color: $panelBackground;
+    border-color: $panelBorderColor;
+  }
+
+  .checkboxes input:checked + label,
+  .radios input:checked + label {
+    text-decoration: underline solid $panelHeaderColor;
+    -webkit-text-decoration: underline solid $panelHeaderColor;
+  }
+
+  .with-icon {
+    &:hover > a,
+    &:hover > .link {
+      background-color: $panelHoverBackground;
+    }
+
+    &.active > a,
+    &.active > .link {
+      background-color: $panelActiveBackground;
+
+      &:nth-child(2) > .icon {
+        fill: $panelHoverBackground;
+      }
+
+      &:nth-child(2) > .icon:hover {
+        fill: $panelActiveText;
+      }
+    }
+
+    & > a,
+    & > .link {
+      &:nth-child(2) {
+        & > .icon {
+          fill: $panelBackground;
+
+          &:hover {
+            fill: $panelActiveBackground;
+          }
+        }
+      }
+    }
+  }
+}
+
+.panel {
+  @include panelMixin(
+    $base,
+    $surface2,
+    $blue3,
+    $blue3,
+    $overlay0,
+    $text,
+    $surface0,
+    $blue3,
+    $white
+  );
+
+  border-radius: 6px;
+  font-family: $utilityText;
+  font-size: 0.93rem;
+  padding: 0.7em;
+  margin-bottom: 1em;
+  transition: 0.3s top;
+  text-align: left;
+
+  .seperator {
+    border-top: 1px solid $crust;
+    margin: 0.5em -0.7em;
+  }
+
+  form {
+    width: 100%;
+    margin: 0;
+  }
+
+  ul,
+  ol {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+
+    & > li > a,
+    & > li > .link,
+    .subnav > label {
+      line-height: 1.5em;
+      padding: 0.1em 0.3em;
+      display: block;
+      text-decoration: none;
+      border-radius: 4px;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      width: 100%;
+      text-align: left;
+
+      & > .icon {
+        height: 1.3em;
+        width: 1.3em;
+        transform: translateY(0.2em);
+        margin-right: 0.3em;
+      }
+    }
+  }
+
+  dl {
+    padding: 0;
+    margin: 0;
+  }
+
+  & > .toggler {
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 0.1em 0.3em 0.1em 0;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: 0.2s opacity;
+
+    &:hover,
+    &:active {
+      opacity: 1;
+    }
+
+    & > .icon.chevron {
+      width: 1.2em;
+      height: 1.2em;
+      opacity: 0.6;
+      margin-right: 0.1em;
+      position: relative;
+      top: 0.2em;
+      transform: rotate(180deg);
+      transition: 0.2s transform;
+    }
+
+    & + .toggler-content {
+      display: none;
+    }
+
+    &.active {
+      margin-bottom: 0.4em;
+      opacity: 1;
+
+      & > .icon.chevron {
+        transform: rotate(0);
+      }
+
+      & + .toggler-content {
+        display: block;
+      }
+    }
+  }
+
+  & > .header,
+  & > header {
+    margin: 0 0 0.3em;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+
+    & > .icon {
+      height: 1.1em;
+      width: 1.1em;
+      transform: translateY(0.2em);
+      margin-right: 0.1em;
+    }
+
+    &.tabs {
+      & > span {
+        margin-right: 0.5em;
+      }
+    }
+  }
+
+  .subnav > input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    height: 0;
+    width: 0;
+  }
+
+  .subnav > label .icon.chevron {
+    float: right;
+    fill: $subtext0;
+    height: 1.3em;
+    width: 1.3em;
+    margin-top: 0.1em;
+    margin-right: 0;
+    transform: rotate(180deg);
+    transform-origin: center;
+    transition: 0.2s transform;
+  }
+
+  .subnav > label.hover .icon.chevron,
+  .subnav > label:hover .icon.chevron,
+  .subnav > label:focus .icon.chevron {
+    fill: $black;
+    pointer-events: none;
+  }
+
+  .subnav > input:checked + label .icon.chevron,
+  .subnav:focus-within:not(.active) > label .icon.chevron {
+    transform: rotate(0deg);
+  }
+
+  .subnav > ul {
+    padding: 0;
+    height: 0;
+    overflow: hidden;
+    padding: 1px 1px 1px 0.5em;
+    font-size: 0.9em;
+    line-height: 1.3em;
+  }
+
+  .subnav > input:checked + label + ul {
+    height: auto;
+    margin: 0.4em 0 0.4em 0.4em;
+    overflow: visible;
+  }
+
+  &.arrow {
+    position: relative;
+
+    &:after {
+      content: "";
+      display: block;
+      position: absolute;
+      top: -1px;
+      left: calc(50% - 0.6em);
+      width: 1.2em;
+      height: 1.2em;
+      border-width: 1px 1px 0 0;
+      border-style: solid;
+      border-radius: 0 0 0 100%;
+      transform: translateY(-50%) rotate(-45deg);
+    }
+
+    &.top:after {
+      top: -1px;
+      transform: translateY(-50%) rotate(-45deg);
+    }
+
+    &.bottom:after {
+      top: auto;
+      bottom: -1px;
+      transform: translateY(50%) rotate(135deg);
+    }
+
+    &.left:after {
+      left: calc(1.6em - 0.6em);
+    }
+
+    &.center:after {
+      left: calc(50% - 0.6em);
+    }
+
+    &.right:after {
+      left: auto;
+      right: calc(1.6em - 0.6em);
+    }
+  }
+
+  .disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    //pointer-events: none;
+
+    & > * {
+      pointer-events: none;
+    }
+  }
+
+  .checkboxes,
+  .radios {
+    & > li {
+      display: block;
+      position: relative;
+
+      & > input {
+        position: absolute;
+        z-index: 1;
+        top: 50%;
+        left: 0.5em;
+        transform: translateY(-50%);
+
+        &:checked + label > span:last-child {
+          text-decoration: none;
+          opacity: 1;
+        }
+      }
+
+      label {
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 0 0.4rem 0 1.9em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+
+        & > span:first-child {
+          flex: 0 0 79%;
+          width: 79%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        & > span:last-child {
+          flex: 0 0 21%;
+          text-align: right;
+          opacity: 0.75;
+          font-size: 0.9em;
+        }
+      }
+    }
+  }
+
+  &.expandable {
+    & > input[type="checkbox"] {
+      position: absolute;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
+
+      &:checked {
+        & + * + ul > .more {
+          display: none;
+
+          & ~ * {
+            display: block;
+          }
+        }
+      }
+    }
+
+    .more,
+    .less {
+      & > label {
+        opacity: 0.75;
+        display: flex;
+        flex-direction: row-reverse;
+
+        &:hover,
+        &:focus {
+          opacity: 1;
+          background-color: transparent;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+      }
+
+      & ~ * {
+        display: none;
+      }
+    }
+  }
+
+  .with-icon {
+    display: flex;
+
+    & > a {
+      &:nth-child(1) {
+        border-radius: 4px 0 0 4px;
+        line-height: 1;
+        padding-top: 0.4em;
+        padding-bottom: 0.4em;
+        flex-grow: 100;
+      }
+
+      &:nth-child(2) {
+        border-radius: 0 4px 4px 0;
+      }
+    }
+  }
+
+  &.rosewater {
+    @include panelMixin(
+      $rosewater0,
+      $rosewater2,
+      $text,
+      $rosewater3,
+      $rosewater3,
+      $text,
+      rgba($rosewater3, 0.2),
+      $rosewater3,
+      $white
+    );
+  }
+
+  &.flamingo {
+    @include panelMixin(
+      $flamingo0,
+      $flamingo2,
+      $text,
+      $flamingo3,
+      $flamingo3,
+      $text,
+      rgba($flamingo3, 0.2),
+      $flamingo3,
+      $white
+    );
+  }
+
+  &.pink {
+    @include panelMixin(
+      $pink0,
+      $pink2,
+      $text,
+      $pink3,
+      $pink3,
+      $text,
+      rgba($pink3, 0.2),
+      $pink3,
+      $white
+    );
+  }
+
+  &.mauve {
+    @include panelMixin(
+      $mauve0,
+      $mauve2,
+      $text,
+      $mauve3,
+      $mauve3,
+      $text,
+      rgba($mauve3, 0.2),
+      $mauve3,
+      $white
+    );
+  }
+
+  &.red {
+    @include panelMixin(
+      $red0,
+      $red2,
+      $text,
+      $red3,
+      $red3,
+      $text,
+      rgba($red3, 0.2),
+      $red3,
+      $white
+    );
+  }
+
+  &.maroon {
+    @include panelMixin(
+      $maroon0,
+      $maroon2,
+      $text,
+      $maroon3,
+      $maroon3,
+      $text,
+      rgba($maroon3, 0.2),
+      $maroon3,
+      $white
+    );
+  }
+
+  &.peach {
+    @include panelMixin(
+      $peach0,
+      $peach2,
+      $text,
+      $peach3,
+      $peach3,
+      $text,
+      rgba($peach3, 0.2),
+      $peach3,
+      $white
+    );
+  }
+
+  &.yellow {
+    @include panelMixin(
+      $yellow0,
+      $yellow2,
+      $text,
+      $yellow3,
+      $yellow3,
+      $text,
+      rgba($yellow3, 0.2),
+      $yellow3,
+      $white
+    );
+  }
+
+  &.green {
+    @include panelMixin(
+      $green0,
+      $green2,
+      $text,
+      $green3,
+      $green3,
+      $text,
+      rgba($green3, 0.2),
+      $green3,
+      $white
+    );
+  }
+
+  &.teal {
+    @include panelMixin(
+      $teal0,
+      $teal2,
+      $text,
+      $teal3,
+      $teal3,
+      $text,
+      rgba($teal3, 0.2),
+      $teal3,
+      $white
+    );
+  }
+
+  &.sky {
+    @include panelMixin(
+      $sky0,
+      $sky2,
+      $text,
+      $sky3,
+      $sky3,
+      $text,
+      rgba($sky3, 0.2),
+      $sky3,
+      $white
+    );
+  }
+
+  &.sapphire {
+    @include panelMixin(
+      $sapphire0,
+      $sapphire2,
+      $text,
+      $sapphire3,
+      $sapphire3,
+      $text,
+      rgba($sapphire3, 0.2),
+      $sapphire3,
+      $white
+    );
+  }
+
+  &.blue {
+    @include panelMixin(
+      $blue0,
+      $blue2,
+      $text,
+      $blue3,
+      $blue3,
+      $text,
+      rgba($blue3, 0.2),
+      $blue3,
+      $white
+    );
+  }
+
+  &.lavender {
+    @include panelMixin(
+      $lavender0,
+      $lavender2,
+      $text,
+      $lavender3,
+      $lavender3,
+      $text,
+      rgba($lavender3, 0.2),
+      $lavender3,
+      $white
+    );
+  }
+
+  &.gray {
+    @include panelMixin(
+      $surface0,
+      $surface2,
+      $text,
+      $overlay0,
+      $surface2,
+      $text,
+      rgba($overlay0, 0.2),
+      $overlay0,
+      $white
+    );
+  }
+}

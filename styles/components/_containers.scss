@@ -1,0 +1,292 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+@mixin containerMixin(
+  $containerBackground,
+  $containerBorderColor,
+  $containerText,
+  $containerLinkColor,
+  $containerHeader
+) {
+  background-color: $containerBackground;
+  color: $containerText;
+  border: 1px solid $containerBorderColor;
+
+  a {
+    color: $containerLinkColor;
+    text-decoration: underline solid $containerLinkColor;
+
+    &:hover {
+      color: $containerText;
+      text-decoration: underline solid $containerLinkColor;
+    }
+
+    &:active {
+      color: $containerText;
+      text-decoration: underline solid $containerText;
+    }
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: $containerHeader;
+  }
+}
+
+.container {
+  @include containerMixin($mantle, $surface1, $text, $blue3, $text);
+
+  margin: $paragraphSpacer 0;
+  padding: 0 1em 1em;
+  border-radius: 6px;
+  position: relative;
+
+  & > main {
+    padding: 0 1em 1em;
+  }
+
+  &.browser {
+    margin-top: calc(#{$paragraphSpacer} + 2.9em);
+    padding: 0 0 2em;
+    border-radius: 0;
+    background-color: $base !important;
+
+    &:before {
+      content: "";
+      display: block;
+      height: 2.9em;
+      position: absolute;
+      top: -2.9em;
+      left: -1px;
+      right: -1px;
+      border-width: 1px;
+      border-style: solid;
+      border-color: $surface1;
+      border-radius: 6px 6px 0 0;
+      background-color: $mantle;
+      background-image:
+        url("data:image/svg+xml;utf8, <svg xmlns='http://www.w3.org/2000/svg' width='1em' height='1em'><circle cx='.5em' cy='.5em' r='.5em' fill='%23eab4ae' /></svg>"),
+        url("data:image/svg+xml;utf8, <svg xmlns='http://www.w3.org/2000/svg' width='1em' height='1em'><circle cx='.5em' cy='.5em' r='.5em' fill='%23fbedb7' /></svg>"),
+        url("data:image/svg+xml;utf8, <svg xmlns='http://www.w3.org/2000/svg' width='1em' height='1em'><circle cx='.5em' cy='.5em' r='.5em' fill='%23abedc7' /></svg>");
+      background-position:
+        1em 0.9em,
+        2.7em 0.9em,
+        4.4em 0.9em;
+      background-repeat: no-repeat, no-repeat, no-repeat;
+    }
+
+    &:after {
+      content: "";
+      display: block;
+      position: absolute;
+      top: -2.45em;
+      left: 6.5em;
+      right: 1em;
+      height: 2em;
+      padding: 0.2em 1em;
+      border: 1px solid $surface1;
+      background-color: $base;
+      border-radius: 3px;
+      cursor: text;
+    }
+
+    & > .url {
+      color: $text;
+      background-color: transparent;
+      font-family: $utilityText;
+      position: absolute;
+      top: -2.45em;
+      left: 6.5em;
+      right: 1em;
+      height: 2em;
+      padding: 0.2em 1em;
+      z-index: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: text;
+    }
+  }
+
+  &.rosewater {
+    @include containerMixin(
+      $rosewater0,
+      $rosewater2,
+      $text,
+      $rosewater0,
+      $text
+    );
+  }
+
+  &.flamingo {
+    @include containerMixin(
+      $flamingo0,
+      $flamingo2,
+      $text,
+      $flamingo0,
+      $text
+    );
+  }
+
+
+  &.pink {
+    @include containerMixin(
+      $pink0,
+      $pink2,
+      $text,
+      $pink0,
+      $text
+    );
+  }
+
+
+  &.mauve {
+    @include containerMixin(
+      $mauve0,
+      $mauve2,
+      $text,
+      $mauve0,
+      $text
+    );
+  }
+
+
+  &.red {
+    @include containerMixin(
+      $red0,
+      $red2,
+      $text,
+      $red0,
+      $text
+    );
+  }
+
+
+  &.maroon {
+    @include containerMixin(
+      $maroon0,
+      $maroon2,
+      $text,
+      $maroon0,
+      $text
+    );
+  }
+
+
+  &.peach {
+    @include containerMixin(
+      $peach0,
+      $peach2,
+      $text,
+      $peach0,
+      $text
+    );
+  }
+
+
+  &.yellow {
+    @include containerMixin(
+      $yellow0,
+      $yellow2,
+      $text,
+      $yellow0,
+      $text
+    );
+  }
+
+
+  &.green {
+    @include containerMixin(
+      $green0,
+      $green2,
+      $text,
+      $green0,
+      $text
+    );
+  }
+
+
+  &.teal {
+    @include containerMixin(
+      $teal0,
+      $teal2,
+      $text,
+      $teal0,
+      $text
+    );
+  }
+
+
+  &.sky {
+    @include containerMixin(
+      $sky0,
+      $sky2,
+      $text,
+      $sky0,
+      $text
+    );
+  }
+
+
+  &.sapphire {
+    @include containerMixin(
+      $sapphire0,
+      $sapphire2,
+      $text,
+      $sapphire0,
+      $text
+    );
+  }
+
+
+  &.blue {
+    @include containerMixin(
+      $blue0,
+      $blue2,
+      $text,
+      $blue0,
+      $text
+    );
+  }
+
+
+  &.lavender {
+    @include containerMixin(
+      $lavender0,
+      $lavender2,
+      $text,
+      $lavender0,
+      $text
+    );
+  }
+
+  &.gray {
+    @include containerMixin(
+      $surface0,
+      $surface1,
+      $text,
+      $surface0,
+      $text
+    );
+  }
+
+  &.black {
+    @include containerMixin($asideBase, $asideCrust, $asideText, $asideBase, $asideText);
+
+    input,
+    select,
+    textarea {
+      background-color: $subtext1;
+      border-color: $subtext0;
+      color: white;
+    }
+
+    table tr:hover td {
+      background-color: rgba($subtext0, 0.3);
+    }
+  }
+}

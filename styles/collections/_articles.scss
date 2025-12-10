@@ -1,0 +1,60 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+article,
+.article {
+  & > header {
+    padding-bottom: 0.5em;
+    border-bottom: 1px dotted $crust;
+
+    & > h1,
+    & > h2,
+    & > h3,
+    & > h4,
+    & > h5,
+    & > h6 {
+      margin-bottom: 0;
+    }
+
+    .meta {
+      font-family: $utilityText;
+      color: $subtext0;
+
+      a {
+        color: $subtext0;
+        text-decoration: underline solid $subtext0;
+      }
+
+      time {
+        text-decoration-color: $subtext0;
+      }
+    }
+  }
+
+  & > footer {
+    font-family: $utilityText;
+    color: $crust;
+    border-top: 1px dotted $crust;
+    padding-top: 0.5em;
+
+    a {
+      color: $crust;
+      text-decoration: underline solid $crust;
+    }
+
+    time {
+      text-decoration-color: $crust;
+    }
+  }
+
+  & > section,
+  & > .section {
+    padding-bottom: 1em;
+    border-bottom: 1px solid $crust;
+
+    &:last-child {
+      padding-bottom: 1em;
+      border-bottom-width: 0;
+    }
+  }
+}

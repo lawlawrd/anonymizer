@@ -1,0 +1,19 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+.code-example {
+  & > pre {
+    padding: 0;
+
+    & > code {
+      background-color: $mantle;
+      border: 1px solid $surface0;
+      color: $text;
+      line-height: 1.4;
+
+      &.hljs {
+        padding: 1.5em;
+      }
+    }
+  }
+}

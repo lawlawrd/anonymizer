@@ -1,0 +1,103 @@
+@use "../colors" as *;
+@use "../variables" as *;
+
+main {
+  position: relative;
+
+  & > input#sidebar-toggle {
+    position: absolute;
+    top: 0;
+    opacity: 0;
+    pointer-events: none;
+
+    & + label {
+      display: none;
+    }
+  }
+
+  @media (max-width: 900px) {
+    & > input#sidebar-toggle + label {
+      position: fixed;
+      top: 80vh;
+      right: 0;
+      display: block;
+      background-color: $mantle;
+      width: $headerHeight * 0.8;
+      height: $headerHeight * 0.8;
+      text-decoration: none;
+      border-radius: 6px 0 0 6px;
+      border-width: 1px 0 1px 1px;
+      border-style: solid;
+      border-color: $crust;
+      padding: 0;
+      margin: 0;
+      transition: 0.2s right;
+      box-shadow: -2px 2px 2px rgba($text, 0.3);
+
+      &:hover,
+      &:focus {
+        background-color: $base;
+      }
+
+      & .icon {
+        fill: $text;
+        width: 50%;
+        height: 50%;
+        margin: 25%;
+
+        &.close {
+          display: none;
+        }
+      }
+    }
+
+    & > input#sidebar-toggle + label + aside {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 0;
+      overflow: hidden;
+      max-width: 100vw;
+      min-height: 100%;
+      padding: 0;
+      transform: translateX(100%);
+      transition: 0.2s transform;
+      background-color: $base;
+      border-left: 1px solid $crust;
+    }
+
+    & > input#sidebar-toggle:checked {
+      & + label {
+        right: calc(24em - 1px);
+        z-index: 999;
+        background-color: $base;
+
+        & > .icon {
+          &.menu {
+            display: none;
+          }
+
+          &.close {
+            display: block;
+          }
+        }
+        & + aside {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 24em;
+          max-width: 100vw;
+          z-index: 998;
+          padding: 0.5rem;
+          box-shadow: 0 3px 5px rgba($text, 0.3);
+          transform: translateX(0);
+
+          & > .panel {
+            position: sticky;
+            bottom: 300px;
+          }
+        }
+      }
+    }
+  }
+}
