@@ -3,9 +3,13 @@ html(lang="en")
   head
     meta(charset="UTF-8")
     meta(name="viewport" content="width=device-width, initial-scale=1.0")
+
     title #{title}
-    link(rel="stylesheet" href="/styles/anonymizer-light.min.css")
-  body
+
+    link(rel="icon", href="/images/face.svg", type="image/svg+xml")
+    link(rel="stylesheet", href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono:300,300i,400,400i,700,700i|IBM+Plex+Sans:300,300i,400,400i,500,500i,700,700i|IBM+Plex+Serif:300,300i,400,400i,700,700i")
+    link(rel="stylesheet" href="/anonymizer-light.min.css")
+
+  body#anonymizer
     noscript Please enable JavaScript to run the Anonymizer.
-    #anonymizer
     script(src="/bundle.js")

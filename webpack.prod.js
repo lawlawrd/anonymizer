@@ -10,7 +10,8 @@ export default {
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'public'),
-    clean: true,
+    // Do not clean the output directory to avoid deleting compiled CSS assets.
+    clean: false,
   },
   module: {
     rules: [

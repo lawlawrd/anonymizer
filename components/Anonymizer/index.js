@@ -19,25 +19,17 @@ const INITIAL_EDITOR_STATE = {
 };
 
 const DEFAULT_ACCEPTANCE_THRESHOLD = 0.5;
+const API_BASE_URL = "/api";
+const API_ROUTES = {
+  anonymize: `${API_BASE_URL}/anonymize`,
+  saved: `${API_BASE_URL}/anonymize/saved`,
+};
+const THEME_STORAGE_KEY = "anonymizerTheme";
+const THEME_LIGHT = "light";
+const THEME_DARK = "dark";
 
 const SUGGESTION_DEBOUNCE_MS = 300;
 const SUGGESTION_LIMIT = 10;
-
-const formatSavedTimestamp = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-};
 
 const stableStringify = (value) => {
   if (value === null) {
@@ -237,6 +229,7 @@ const ENTITY_TYPE_OPTIONS = [
 ];
 
 const ENTITY_TYPE_STORAGE_KEY = "preferredEntityTypes";
+const PRESET_STORAGE_KEY = "anonymizerPresets";
 const ENTITY_TYPE_TRANSLATIONS = {
   nl: {
     PERSON: { label: "Persoon", value: "PERSOON" },
@@ -375,6 +368,65 @@ const sortPresetsByName = (presetList) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
   );
 
+const normalizePreset = (preset, fallbackId) => {
+  const presetId = Number.isFinite(preset?.id) ? preset.id : fallbackId;
+  const name =
+    typeof preset?.name === "string" && preset.name.trim().length > 0
+      ? preset.name.trim()
+      : "Untitled preset";
+  const nerModel =
+    typeof preset?.nerModel === "string" && preset.nerModel.trim().length > 0
+      ? preset.nerModel
+      : DEFAULT_NER_MODEL;
+  const threshold =
+    typeof preset?.threshold === "number"
+      ? preset.threshold
+      : DEFAULT_ACCEPTANCE_THRESHOLD;
+  const allowlist =
+    typeof preset?.allowlist === "string" ? preset.allowlist : "";
+  const denylist = typeof preset?.denylist === "string" ? preset.denylist : "";
+  const entityTypes = Array.isArray(preset?.entityTypes)
+    ? preset.entityTypes.filter((value) => typeof value === "string")
+    : [];
+
+  return {
+    id: presetId,
+    name,
+    nerModel,
+    threshold,
+    allowlist,
+    denylist,
+    entityTypes,
+  };
+};
+
+const readStoredPresets = () => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = window.localStorage.getItem(PRESET_STORAGE_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((preset, index) => normalizePreset(preset, index + 1));
+  } catch (error) {
+    console.warn("Failed to read stored presets", error);
+    return [];
+  }
+};
+
+const persistPresets = (presetList) => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify(presetList ?? []),
+    );
+  } catch (error) {
+    console.warn("Failed to persist presets", error);
+  }
+};
+
 const Anonymizer = () => {
   const [editorState, setEditorState] = useState(INITIAL_EDITOR_STATE);
   const [nerModel, setNerModel] = useState(DEFAULT_NER_MODEL);
@@ -441,14 +493,8 @@ const Anonymizer = () => {
   const [saveStatusMessage, setSaveStatusMessage] = useState("");
   const [saveErrorMessage, setSaveErrorMessage] = useState("");
   const [savedSearchQuery, setSavedSearchQuery] = useState("");
-  const [savedSuggestions, setSavedSuggestions] = useState([]);
-  const [isFetchingSavedSuggestions, setIsFetchingSavedSuggestions] =
-    useState(false);
-  const [savedSuggestionsError, setSavedSuggestionsError] = useState("");
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [editorOverride, setEditorOverride] = useState(null);
-  const [isLoadingSavedAnonymization, setIsLoadingSavedAnonymization] =
-    useState(false);
   const [openFilters, setOpenFilters] = useState(
     JSON.parse(localStorage.getItem("openFilters")) || ["ner-model"],
   );
@@ -462,8 +508,16 @@ const Anonymizer = () => {
   const [isPersistingPreset, setIsPersistingPreset] = useState(false);
   const [presetStatusMessage, setPresetStatusMessage] = useState("");
   const [presetErrorMessage, setPresetErrorMessage] = useState("");
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === "undefined") {
+      return THEME_LIGHT;
+    }
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return stored === THEME_DARK ? THEME_DARK : THEME_LIGHT;
+  });
 
   const editorContentRef = useRef(null);
+  const selectAllFindingsRef = useRef(null);
   const savedSuggestionsControllerRef = useRef(null);
   const savedSuggestionsDebounceRef = useRef(null);
   const suggestionsContainerRef = useRef(null);
@@ -494,6 +548,8 @@ const Anonymizer = () => {
     });
     return map;
   }, [localizedEntityOptions]);
+  const brandImageSrc =
+    theme === THEME_DARK ? "/images/face-white.svg" : "/images/face-black.svg";
 
   const hasContent = editorState.text.trim().length > 0;
   const selectedBuiltinEntityTypes = useMemo(
@@ -502,6 +558,10 @@ const Anonymizer = () => {
         (option) => entityTypeSelection[option.value] !== false,
       ).map((option) => option.value),
     [entityTypeSelection],
+  );
+  const selectedEntityTypeCount = useMemo(
+    () => selectedBuiltinEntityTypes.length,
+    [selectedBuiltinEntityTypes],
   );
   const filteredEntityOptions = useMemo(() => {
     const query = entityTypeFilter.trim().toLowerCase();
@@ -534,6 +594,44 @@ const Anonymizer = () => {
     () => [...selectedBuiltinEntityTypes],
     [selectedBuiltinEntityTypes],
   );
+  const allowlistCount = useMemo(
+    () =>
+      allowlistText
+        .split(/[\n,]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean).length,
+    [allowlistText],
+  );
+  const denylistCount = useMemo(
+    () =>
+      denylistText
+        .split(/[\n,]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean).length,
+    [denylistText],
+  );
+  const allEntityTypesSelected = useMemo(
+    () =>
+      ENTITY_TYPE_OPTIONS.every(
+        (option) => entityTypeSelection[option.value] !== false,
+      ),
+    [entityTypeSelection],
+  );
+  const handleEntityTypeToggleAll = useCallback(() => {
+    setEntityTypeSelection((previous) => {
+      const nextValue = !ENTITY_TYPE_OPTIONS.every(
+        (option) => previous[option.value] !== false,
+      );
+      const updated = {};
+      ENTITY_TYPE_OPTIONS.forEach((option) => {
+        updated[option.value] = nextValue;
+      });
+      return updated;
+    });
+  }, []);
+  const entityTypeToggleLabel = allEntityTypesSelected
+    ? "Deselect all"
+    : "Select all";
   const selectedPreset = useMemo(() => {
     const parsedId = Number.parseInt(selectedPresetId, 10);
     if (!Number.isFinite(parsedId)) {
@@ -547,27 +645,42 @@ const Anonymizer = () => {
     setMoreEntityOptions(false);
   }, [selectedLanguage]);
 
-  const loadPresets = useCallback(async () => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch (storageError) {
+      console.warn("Failed to store theme preference", storageError);
+    }
+
+    const desiredHref =
+      theme === THEME_DARK
+        ? "/anonymizer-dark.min.css"
+        : "/anonymizer-light.min.css";
+    const existingLink = document.querySelector(
+      'link[href*="/anonymizer-light.min.css"], link[href*="/anonymizer-dark.min.css"]',
+    );
+    if (existingLink) {
+      existingLink.setAttribute("href", desiredHref);
+    } else {
+      const linkEl = document.createElement("link");
+      linkEl.rel = "stylesheet";
+      linkEl.href = desiredHref;
+      document.head.appendChild(linkEl);
+    }
+  }, [theme]);
+
+  const loadPresets = useCallback(() => {
     setIsFetchingPresets(true);
     setPresetErrorMessage("");
+    setPresetStatusMessage("");
+
     try {
-      const response = await fetch("/api/presets");
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Request failed");
+      const loadedPresets = sortPresetsByName(readStoredPresets());
+      setPresets(loadedPresets);
+      if (loadedPresets.length === 0) {
+        setSelectedPresetId("");
       }
-
-      const data = await response.json();
-      const list = Array.isArray(data?.presets) ? data.presets : [];
-      setPresets(sortPresetsByName(list));
-      setSelectedPresetId((current) => {
-        if (!current) {
-          return "";
-        }
-
-        const currentId = Number.parseInt(current, 10);
-        return list.some((preset) => preset.id === currentId) ? current : "";
-      });
     } catch (error) {
       console.error("Failed to load presets", error);
       setPresetErrorMessage("Failed to load presets.");
@@ -590,59 +703,41 @@ const Anonymizer = () => {
     };
   }, [presetStatusMessage]);
 
-  const fetchSavedSuggestions = useCallback(async (query) => {
+  const fetchSavedSuggestions = useCallback((query) => {
     if (savedSuggestionsControllerRef.current) {
       savedSuggestionsControllerRef.current.abort();
       savedSuggestionsControllerRef.current = null;
     }
 
-    const controller =
-      typeof AbortController === "function" ? new AbortController() : null;
+    const controller = new AbortController();
+    savedSuggestionsControllerRef.current = controller;
 
-    if (controller) {
-      savedSuggestionsControllerRef.current = controller;
+    const params = new URLSearchParams();
+    params.set("limit", String(SUGGESTION_LIMIT));
+    if (query && query.trim()) {
+      params.set("q", query.trim());
     }
 
-    setIsFetchingSavedSuggestions(true);
-    setSavedSuggestionsError("");
-
-    try {
-      const params = new URLSearchParams();
-      if (query && query.trim().length > 0) {
-        params.set("q", query.trim());
-      }
-      params.set("limit", SUGGESTION_LIMIT.toString());
-
-      const queryString = params.toString();
-      const response = await fetch(
-        `/api/anonymize/saved${queryString ? `?${queryString}` : ""}`,
-        controller ? { signal: controller.signal } : undefined,
-      );
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Request failed");
-      }
-
-      const data = await response.json();
-      const list = Array.isArray(data?.anonymizations)
-        ? data.anonymizations.filter(
-            (item) => item && typeof item.id === "number",
-          )
-        : [];
-      setSavedSuggestions(list);
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        return;
-      }
-      console.error("Failed to load saved anonymizations", error);
-      setSavedSuggestionsError("Failed to load saved anonymizations.");
-    } finally {
-      if (savedSuggestionsControllerRef.current === controller) {
+    fetch(`${API_ROUTES.saved}?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (controller.signal.aborted) return null;
+        if (!response.ok) {
+          throw new Error(`Saved search failed with status ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (!data || controller.signal.aborted) return;
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.error("Failed to load saved anonymizations", error);
+      })
+      .finally(() => {
         savedSuggestionsControllerRef.current = null;
-      }
-      setIsFetchingSavedSuggestions(false);
-    }
+      });
   }, []);
 
   useEffect(() => {
@@ -822,6 +917,23 @@ const Anonymizer = () => {
     entityTypeDisplayValueMap,
   ]);
 
+  const { allFindingsSelected, someFindingsSelected, totalFindingsCount } =
+    useMemo(() => {
+      let selectedCount = 0;
+      findings.forEach((finding) => {
+        if (entityToggles[finding.id] !== false) {
+          selectedCount += 1;
+        }
+      });
+      const totalCount = findings.length;
+      return {
+        allFindingsSelected: totalCount > 0 && selectedCount === totalCount,
+        someFindingsSelected:
+          selectedCount > 0 && selectedCount < totalCount && totalCount > 0,
+        totalFindingsCount: totalCount,
+      };
+    }, [entityToggles, findings]);
+
   const handleSubmit = useCallback(
     async (event) => {
       event.preventDefault();
@@ -843,12 +955,12 @@ const Anonymizer = () => {
 
       setIsSubmitting(true);
       setErrorMessage("");
-      setStatusMessage("Contacting Presidio services...");
+      setStatusMessage("Contacting Presidio services…");
       setSaveStatusMessage("");
       setSaveErrorMessage("");
 
       try {
-        const response = await fetch("/api/anonymize", {
+        const response = await fetch(API_ROUTES.anonymize, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -866,16 +978,20 @@ const Anonymizer = () => {
 
         if (!response.ok) {
           const message = await response.text();
-          throw new Error(message || "Request failed");
+          throw new Error(message || "Anonymization request failed.");
         }
 
         const data = await response.json();
-        const rawEntities = Array.isArray(data.entities)
-          ? data.entities.map((entity) => ({ ...entity }))
-          : [];
-        const items = Array.isArray(data.items)
-          ? data.items.map((item) => ({ ...item }))
-          : [];
+        const rawEntities = Array.isArray(data?.entities) ? data.entities : [];
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const anonymizedText =
+          typeof data?.anonymizedText === "string"
+            ? data.anonymizedText
+            : submission.text;
+        const localizedResultText =
+          rawEntities.length > 0
+            ? localizeEntityPlaceholders(anonymizedText)
+            : anonymizedText;
         const initialToggles = Object.fromEntries(
           rawEntities.map((entity, index) => [
             buildEntityId(entity, index),
@@ -889,10 +1005,6 @@ const Anonymizer = () => {
           rawEntities.map((entity) => ({ ...entity })),
           { entityTypeDisplayMap: entityTypeDisplayValueMap },
         );
-        const localizedResultText =
-          typeof data.anonymizedText === "string"
-            ? localizeEntityPlaceholders(data.anonymizedText)
-            : "";
 
         const payload = {
           sourceText: submission.text,
@@ -927,7 +1039,7 @@ const Anonymizer = () => {
       } catch (error) {
         console.error(error);
         setErrorMessage(
-          "Something went wrong while contacting Presidio. Check the console and make sure the services are running.",
+          "Anonymization failed. Ensure the Presidio services are reachable.",
         );
         setStatusMessage("");
       } finally {
@@ -949,146 +1061,144 @@ const Anonymizer = () => {
     ],
   );
 
-  const handleLoadSavedAnonymization = useCallback(async (anonymizationId) => {
-    const numericId =
-      typeof anonymizationId === "number"
-        ? anonymizationId
-        : Number.parseInt(anonymizationId, 10);
+  const handleLoadSavedAnonymization = useCallback(
+    async (anonymizationId) => {
+      const numericId =
+        typeof anonymizationId === "number"
+          ? anonymizationId
+          : Number.parseInt(anonymizationId, 10);
 
-    if (!Number.isFinite(numericId)) {
-      return;
-    }
-
-    setIsLoadingSavedAnonymization(true);
-    setSaveStatusMessage("");
-    setSaveErrorMessage("");
-
-    try {
-      const response = await fetch(`/api/anonymize/saved/${numericId}`);
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Request failed");
+      if (!Number.isFinite(numericId)) {
+        return;
       }
 
-      const data = await response.json();
-      const record = data?.anonymization;
+      setSaveStatusMessage("");
+      setSaveErrorMessage("");
 
-      if (!record || typeof record !== "object") {
-        throw new Error("Anonymization not found.");
-      }
+      try {
+        const response = await fetch(`${API_ROUTES.saved}/${numericId}`);
+        if (!response.ok) {
+          throw new Error(
+            `Failed to load anonymization with status ${response.status}`,
+          );
+        }
 
-      const settings = record.settings ?? {};
-      const normalizedEntityTypes = Array.isArray(settings.entityTypes)
-        ? Array.from(
-            new Set(
-              settings.entityTypes
-                .map((value) =>
-                  typeof value === "string" ? value.trim().toUpperCase() : "",
-                )
-                .filter(Boolean),
-            ),
-          )
-        : [];
-      const normalizedEntities = Array.isArray(record.entities)
-        ? record.entities.map((entity) => ({ ...entity }))
-        : [];
-      const normalizedItems = Array.isArray(record.items)
-        ? record.items.map((item) => ({ ...item }))
-        : [];
+        const data = await response.json();
+        const anonymization = data?.anonymization;
+        if (!anonymization) {
+          throw new Error("Missing anonymization payload.");
+        }
 
-      const payload = {
-        sourceText:
-          typeof record.sourceText === "string" ? record.sourceText : "",
-        sourceHtml:
-          typeof record.sourceHtml === "string" ? record.sourceHtml : "",
-        resultText:
-          typeof record.resultText === "string" ? record.resultText : "",
-        resultHtml:
-          typeof record.resultHtml === "string" ? record.resultHtml : "",
-        nerModel:
-          typeof settings.nerModel === "string" && settings.nerModel.length > 0
-            ? settings.nerModel
-            : DEFAULT_NER_MODEL,
-        language:
-          typeof settings.language === "string" && settings.language.length > 0
-            ? settings.language
-            : "en",
-        threshold:
-          typeof settings.threshold === "number"
-            ? settings.threshold
-            : typeof settings.threshold === "string"
-              ? Number.parseFloat(settings.threshold)
-              : DEFAULT_ACCEPTANCE_THRESHOLD,
-        allowlist:
-          typeof settings.allowlist === "string" ? settings.allowlist : "",
-        denylist:
-          typeof settings.denylist === "string" ? settings.denylist : "",
-        entityTypes: normalizedEntityTypes,
-        entities: normalizedEntities,
-        items: normalizedItems,
-      };
+        const {
+          sourceText = "",
+          sourceHtml = "",
+          resultText = "",
+          resultHtml = "",
+          nerModel: savedNerModel,
+          language: savedLanguage,
+          threshold: savedThreshold,
+          allowlist = "",
+          denylist = "",
+          entityTypes = [],
+        } = anonymization;
 
-      setNerModel(payload.nerModel);
-      setThreshold(
-        Number.isFinite(payload.threshold)
-          ? payload.threshold
-          : DEFAULT_ACCEPTANCE_THRESHOLD,
-      );
-      setAllowlistText(payload.allowlist);
-      setDenylistText(payload.denylist);
+        const rawEntities = Array.isArray(anonymization.entities)
+          ? anonymization.entities
+          : [];
+        const items = Array.isArray(anonymization.items)
+          ? anonymization.items
+          : [];
 
-      const selection = buildDefaultEntityTypeSelection();
-      if (payload.entityTypes.length > 0) {
-        ENTITY_TYPE_OPTIONS.forEach((option) => {
-          selection[option.value] = payload.entityTypes.includes(option.value);
-        });
-      }
-      setEntityTypeSelection(selection);
-
-      setCurrentAnonymizationPayload(payload);
-      const signature = buildResultSignature(payload);
-      setCurrentResultSignature(signature);
-      setLastSavedSignature(signature);
-
-      setEditorState({
-        html: payload.sourceHtml,
-        text: payload.sourceText,
-      });
-      setEditorOverride({
-        version: Date.now(),
-        html: payload.sourceHtml,
-        text: payload.sourceText,
-      });
-      setLastSubmittedText(payload.sourceText);
-      setLastSubmittedHtml(payload.sourceHtml);
-      setResults({
-        anonymizedText: payload.resultText,
-        anonymizedHtml: payload.resultHtml,
-        entities: payload.entities,
-        items: payload.items,
-      });
-      setEntityToggles(
-        Object.fromEntries(
-          payload.entities.map((entity, index) => [
+        setEditorOverride({ html: sourceHtml, text: sourceText });
+        setEditorState({ html: sourceHtml, text: sourceText });
+        const toggles = Object.fromEntries(
+          rawEntities.map((entity, index) => [
             buildEntityId(entity, index),
             true,
           ]),
-        ),
-      );
-      setDisplayHtml(payload.resultHtml);
-      setStatusMessage("Loaded anonymization.");
-      setErrorMessage("");
-      setSelectedPresetId("");
-      setSuggestionsOpen(false);
-      setSaveStatusMessage("Loaded anonymization.");
-    } catch (error) {
-      console.error("Failed to load anonymization", error);
-      setSaveStatusMessage("");
-      setSaveErrorMessage("Failed to load anonymization.");
-    } finally {
-      setIsLoadingSavedAnonymization(false);
-    }
-  }, []);
+        );
+
+        const resolvedResultHtml =
+          typeof resultHtml === "string" && resultHtml.length > 0
+            ? resultHtml
+            : applyAnonymizationToHtml(
+                sourceHtml,
+                sourceText,
+                items,
+                rawEntities.map((entity) => ({ ...entity })),
+                { entityTypeDisplayMap: entityTypeDisplayValueMap },
+              );
+        const localizedResultText = localizeEntityPlaceholders(
+          typeof resultText === "string" && resultText.length > 0
+            ? resultText
+            : sourceText,
+        );
+
+        setResults({
+          anonymizedText: localizedResultText,
+          anonymizedHtml: resolvedResultHtml,
+          entities: rawEntities,
+          items,
+        });
+        setDisplayHtml(resolvedResultHtml);
+        setEntityToggles(toggles);
+        setLastSubmittedText(sourceText);
+        setLastSubmittedHtml(sourceHtml);
+
+        if (savedNerModel) {
+          setNerModel(savedNerModel);
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem("preferredNerModel", savedNerModel);
+          }
+        }
+        if (typeof savedThreshold === "number") {
+          setThreshold(savedThreshold);
+        }
+        setAllowlistText(typeof allowlist === "string" ? allowlist : "");
+        setDenylistText(typeof denylist === "string" ? denylist : "");
+
+        if (Array.isArray(entityTypes) && entityTypes.length > 0) {
+          const nextSelection = {};
+          ENTITY_TYPE_OPTIONS.forEach((option) => {
+            nextSelection[option.value] = entityTypes.includes(option.value);
+          });
+          setEntityTypeSelection(nextSelection);
+        }
+
+        const payload = {
+          sourceText,
+          sourceHtml,
+          resultText: localizedResultText,
+          resultHtml: resolvedResultHtml,
+          nerModel: savedNerModel ?? nerModel,
+          language: savedLanguage ?? selectedLanguage,
+          threshold: savedThreshold ?? threshold,
+          allowlist,
+          denylist,
+          entityTypes,
+          entities: rawEntities,
+          items,
+        };
+
+        const signature = buildResultSignature(payload);
+        setCurrentAnonymizationPayload(payload);
+        setCurrentResultSignature(signature);
+        setLastSavedSignature(signature);
+        setSaveStatusMessage("Loaded saved anonymization.");
+      } catch (error) {
+        console.error("Failed to load anonymization", error);
+        setSaveErrorMessage("Failed to load anonymization.");
+      } finally {
+      }
+    },
+    [
+      entityTypeDisplayValueMap,
+      localizeEntityPlaceholders,
+      nerModel,
+      selectedLanguage,
+      threshold,
+    ],
+  );
 
   const handleSavedSearchChange = useCallback((event) => {
     setSavedSearchQuery(event.target.value);
@@ -1128,7 +1238,7 @@ const Anonymizer = () => {
     setSaveErrorMessage("");
 
     try {
-      const response = await fetch("/api/anonymize/saved", {
+      const response = await fetch(API_ROUTES.saved, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1137,14 +1247,17 @@ const Anonymizer = () => {
       });
 
       if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Request failed");
+        throw new Error(`Save failed with status ${response.status}`);
       }
 
-      await response.json();
+      const data = await response.json();
+      if (!data?.anonymization) {
+        throw new Error("Invalid save response.");
+      }
+
       setLastSavedSignature(signature);
       setCurrentResultSignature(signature);
-      setSaveStatusMessage("Saved anonymization.");
+      setSaveStatusMessage("Saved!");
       fetchSavedSuggestions(savedSearchQuery);
     } catch (error) {
       console.error("Failed to save anonymization", error);
@@ -1202,7 +1315,6 @@ const Anonymizer = () => {
     setSaveErrorMessage("");
     setSuggestionsOpen(false);
     setIsSavingAnonymization(false);
-    setIsLoadingSavedAnonymization(false);
   }, []);
 
   useEffect(() => {
@@ -1498,12 +1610,33 @@ const Anonymizer = () => {
     }
   }, [getPlainTextFromDisplay]);
 
+  const handleToggleAllFindings = useCallback(
+    (isChecked) => {
+      if (findings.length === 0) return;
+      setEntityToggles((previous) => {
+        const next = { ...previous };
+        findings.forEach((finding) => {
+          next[finding.id] = isChecked;
+        });
+        return next;
+      });
+    },
+    [findings],
+  );
+
   const handleFindingToggle = useCallback((id, isChecked) => {
     setEntityToggles((previous) => ({
       ...previous,
       [id]: isChecked,
     }));
   }, []);
+
+  useEffect(() => {
+    const checkbox = selectAllFindingsRef.current;
+    if (!checkbox) return;
+    checkbox.indeterminate =
+      totalFindingsCount > 0 && someFindingsSelected && !allFindingsSelected;
+  }, [allFindingsSelected, someFindingsSelected, totalFindingsCount]);
 
   const handleOpenFilterToggle = useCallback((key, isOpenOrEvent) => {
     const isOpen =
@@ -1520,7 +1653,7 @@ const Anonymizer = () => {
     });
   }, []);
 
-  const handlePresetSave = useCallback(async () => {
+  const handlePresetSave = useCallback(() => {
     if (typeof window === "undefined") return;
 
     const requestedName = window.prompt("Give this preset a name:");
@@ -1540,40 +1673,23 @@ const Anonymizer = () => {
     setPresetErrorMessage("");
 
     try {
-      const response = await fetch("/api/presets", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: trimmedName,
-          nerModel,
-          threshold,
-          allowlist: allowlistText,
-          denylist: denylistText,
-          entityTypes: requestedEntityTypes,
-        }),
+      const preset = {
+        id: Date.now(),
+        name: trimmedName,
+        nerModel,
+        threshold,
+        allowlist: allowlistText,
+        denylist: denylistText,
+        entityTypes: requestedEntityTypes,
+      };
+
+      setPresets((previous) => {
+        const updated = sortPresetsByName([...previous, preset]);
+        persistPresets(updated);
+        return updated;
       });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Request failed");
-      }
-
-      const data = await response.json();
-      const preset = data?.preset;
-
-      if (preset) {
-        setPresets((previous) => {
-          const filtered = previous.filter((item) => item.id !== preset.id);
-          return sortPresetsByName([...filtered, preset]);
-        });
-        setSelectedPresetId(String(preset.id));
-        setPresetStatusMessage(`Saved preset "${preset.name}".`);
-      } else {
-        await loadPresets();
-        setPresetStatusMessage("Preset saved.");
-      }
+      setSelectedPresetId(String(preset.id));
+      setPresetStatusMessage(`Saved preset "${preset.name}".`);
     } catch (error) {
       console.error("Failed to save preset", error);
       setPresetStatusMessage("");
@@ -1581,14 +1697,7 @@ const Anonymizer = () => {
     } finally {
       setIsPersistingPreset(false);
     }
-  }, [
-    allowlistText,
-    denylistText,
-    loadPresets,
-    nerModel,
-    requestedEntityTypes,
-    threshold,
-  ]);
+  }, [allowlistText, denylistText, nerModel, requestedEntityTypes, threshold]);
 
   const handlePresetLoad = useCallback(() => {
     if (!selectedPreset) {
@@ -1625,7 +1734,7 @@ const Anonymizer = () => {
     setPresetStatusMessage(`Loaded preset "${selectedPreset.name}".`);
   }, [selectedPreset]);
 
-  const handlePresetDelete = useCallback(async () => {
+  const handlePresetDelete = useCallback(() => {
     if (!selectedPreset) {
       setPresetStatusMessage("");
       setPresetErrorMessage("Select a preset to delete.");
@@ -1646,18 +1755,13 @@ const Anonymizer = () => {
     setPresetErrorMessage("");
 
     try {
-      const response = await fetch(`/api/presets/${selectedPreset.id}`, {
-        method: "DELETE",
+      setPresets((previous) => {
+        const updated = previous.filter(
+          (item) => item.id !== selectedPreset.id,
+        );
+        persistPresets(updated);
+        return updated;
       });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Request failed");
-      }
-
-      setPresets((previous) =>
-        previous.filter((item) => item.id !== selectedPreset.id),
-      );
       setSelectedPresetId((current) => {
         const currentId = Number.parseInt(current, 10);
         return currentId === selectedPreset.id ? "" : current;
@@ -1672,599 +1776,626 @@ const Anonymizer = () => {
     }
   }, [selectedPreset]);
 
-  const suggestionListItems = (() => {
-    if (savedSuggestionsError) {
-      return [
-        <li className="empty error" key="error">
-          {savedSuggestionsError}
-        </li>,
-      ];
-    }
-
-    const items = savedSuggestions.map((suggestion) => {
-      const timestamp = formatSavedTimestamp(suggestion.createdAt);
-      const previewText =
-        typeof suggestion.preview === "string" && suggestion.preview.length > 0
-          ? suggestion.preview
-          : "(No content)";
-
-      return (
-        <li key={suggestion.id}>
+  return (
+    <>
+      <header className="navbar anonymizer-navbar">
+        <a href="/" id="brand">
+          <img src={brandImageSrc} />
+        </a>
+        <div className="spacer" />
+        <a
+          href="https://github.com/lawlawrd/anonymizer"
+          className={`knob`}
+          style={{ margin: "1px 0 0 .5rem" }}
+          target="_blank"
+        >
+          <svg className="icon">
+            <use xlinkHref="/images/icons.svg#external" />
+          </svg>
+          Github repository
+        </a>
+        {theme === THEME_LIGHT ? (
           <a
             tabIndex={0}
             role="button"
-            onClick={() => handleLoadSavedAnonymization(suggestion.id)}
-            onKeyDown={(event) => handleSuggestionKeyDown(event, suggestion.id)}
+            className={`knob`}
+            style={{ margin: "1px 0 0 1rem" }}
+            onClick={() => setTheme(THEME_DARK)}
+            aria-pressed={theme === THEME_DARK}
           >
-            {timestamp ? `${timestamp} - ${previewText}` : previewText}
+            <svg className="icon">
+              <use xlinkHref="/images/icons.svg#darkmode" />
+            </svg>
+            Dark mode
           </a>
-        </li>
-      );
-    });
-
-    if (items.length === 0) {
-      if (isFetchingSavedSuggestions) {
-        return [
-          <li className="empty" key="loading">
-            Loading…
-          </li>,
-        ];
-      }
-
-      return [
-        <li className="empty" key="empty">
-          No saved anonymizations.
-        </li>,
-      ];
-    }
-
-    return items;
-  })();
-
-  const suggestionPanelItems = isLoadingSavedAnonymization
-    ? [
-        ...suggestionListItems,
-        <li className="empty" key="loading-selection">
-          Loading anonymization…
-        </li>,
-      ]
-    : suggestionListItems;
-
-  return (
-    <>
-      <form className="anonymizer-input" onSubmit={handleSubmit}>
-        <div id="anonymizer-editor" className="editor-field">
-          <Editor
-            editorSize="medium"
-            initState={INITIAL_EDITOR_STATE}
-            updateState={setEditorState}
-            resetState={resetSignal}
-            externalState={editorOverride}
-            placeholder="Write or paste the text you want to anonymize..."
-          />
-        </div>
-
-        <div className="header">
-          <div>
-            <strong>Input</strong>
-            <br />
-            {statusMessage && (
-              <span className="help" role="status" aria-live="polite">
-                {statusMessage}
-              </span>
-            )}
-            {errorMessage && (
-              <span className="help error" role="alert">
-                {errorMessage}
-              </span>
-            )}
-          </div>
-          <div className="spacer" />
-
-          <button type="button" onClick={handleReset} disabled={isSubmitting}>
-            Clear
-          </button>
-          <button
-            type="submit"
-            className="primary"
-            disabled={isSubmitting}
-            style={{ marginRight: "0" }}
+        ) : (
+          <a
+            tabIndex={0}
+            role="button"
+            className={`knob`}
+            style={{ margin: "1px 0 0 1rem" }}
+            onClick={() => setTheme(THEME_LIGHT)}
+            aria-pressed={theme === THEME_LIGHT}
           >
-            {isSubmitting ? "Processing…" : "Anonymize"}
-          </button>
-        </div>
-      </form>
-
-      <section className="anonymizer-results">
-        <div className="header">
-          <div>
-            <strong>Output</strong>
-            {saveStatusMessage && (
-              <span className="help" role="status" aria-live="polite">
-                {saveStatusMessage}
-              </span>
-            )}
-            {saveErrorMessage && (
-              <span className="help error" role="alert">
-                {saveErrorMessage}
-              </span>
-            )}
+            <svg className="icon">
+              <use xlinkHref="/images/icons.svg#lightmode" />
+            </svg>
+            Light mode
+          </a>
+        )}
+      </header>
+      <main className="anonymizer-wrapper">
+        <form className={`anonymizer-input`} onSubmit={handleSubmit}>
+          <div id="anonymizer-editor" className="editor-field">
+            <Editor
+              editorSize="medium"
+              initState={INITIAL_EDITOR_STATE}
+              updateState={setEditorState}
+              resetState={resetSignal}
+              externalState={editorOverride}
+              placeholder="Write or paste the text you want to anonymize..."
+            />
           </div>
-          <div className="spacer" />
 
-          <button
-            type="button"
-            className="positive"
-            onClick={handleSaveCurrentResult}
-            disabled={!canSaveCurrentResult}
-          >
-            {isSavingAnonymization ? "Saving…" : "Save"}
-          </button>
-          <div style={{ minHeight: "1.2rem" }}></div>
-          <div className="suggestions" ref={suggestionsContainerRef}>
-            <div className="group">
-              <svg
-                className="icon chevron"
-                role="button"
-                tabIndex={0}
-                style={{
-                  transform: suggestionsOpen ? "rotate(180deg)" : "none",
-                  transition: "transform 0.2s ease",
-                  cursor: "pointer",
-                }}
-                onClick={() => setSuggestionsOpen((previous) => !previous)}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" ||
-                    event.key === " " ||
-                    event.key === "Space" ||
-                    event.key === "Spacebar"
-                  ) {
-                    event.preventDefault();
-                    setSuggestionsOpen((previous) => !previous);
-                  }
-                }}
-              >
+          <div className="header">
+            <div>
+              <strong>Input</strong>
+              <br />
+              {statusMessage && (
+                <span className="help" role="status" aria-live="polite">
+                  {statusMessage}
+                </span>
+              )}
+              {errorMessage && (
+                <span className="help error" role="alert">
+                  {errorMessage}
+                </span>
+              )}
+            </div>
+            <div className="spacer" />
+
+            <button type="button" onClick={handleReset} disabled={isSubmitting}>
+              Clear
+            </button>
+            <button
+              type="submit"
+              className="primary"
+              disabled={isSubmitting}
+              style={{ marginRight: "0" }}
+            >
+              {isSubmitting ? "Processing…" : "Anonymize"}
+            </button>
+          </div>
+        </form>
+
+        <section className={`anonymizer-results`}>
+          <div className="header">
+            <div>
+              <strong>Output</strong>
+              {saveStatusMessage && (
+                <span className="help" role="status" aria-live="polite">
+                  {saveStatusMessage}
+                </span>
+              )}
+              {saveErrorMessage && (
+                <span className="help error" role="alert">
+                  {saveErrorMessage}
+                </span>
+              )}
+            </div>
+            <div className="spacer" />
+          </div>
+          {displayHtml ? (
+            <div className="editor-wrapper">
+              <div className="editor-toolbar">
+                <button type="button" onClick={handleCopyHtml}>
+                  {copiedHTML ? (
+                    <>
+                      <svg
+                        className="icon"
+                        style={{
+                          marginRight: ".2rem",
+                          transform: "scale(0.9)",
+                        }}
+                      >
+                        <use xlinkHref="/images/icons.svg#check" />
+                      </svg>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="icon"
+                        style={{
+                          marginRight: ".2rem",
+                          transform: "scale(0.9)",
+                        }}
+                      >
+                        <use xlinkHref="/images/icons.svg#content-copy" />
+                      </svg>
+                      Copy HTML
+                    </>
+                  )}
+                </button>
+                <div className="divider" />
+                <button type="button" onClick={handleCopyPlainText}>
+                  {copiedPlainText ? (
+                    <>
+                      <svg
+                        className="icon"
+                        style={{
+                          marginRight: ".2rem",
+                          transform: "scale(0.9)",
+                        }}
+                      >
+                        <use xlinkHref="/images/icons.svg#check" />
+                      </svg>
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="icon"
+                        style={{
+                          marginRight: ".2rem",
+                          transform: "scale(0.9)",
+                        }}
+                      >
+                        <use xlinkHref="/images/icons.svg#content-copy" />
+                      </svg>
+                      Copy plain text
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="editor-content">
+                <div
+                  ref={editorContentRef}
+                  contentEditable={false}
+                  dangerouslySetInnerHTML={{ __html: displayHtml }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="pre-result">
+              <img src={brandImageSrc} />
+              <br />
+              Run the anonymizer to see the generated markup preserving output.
+            </div>
+          )}
+
+          <div className={`fetching ${isSubmitting ? "active" : ""}`}>
+            <div className="spinner" style={{ position: "absolute" }}>
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="20" />
+              </svg>
+            </div>
+          </div>
+        </section>
+
+        <section className={`anonymizer-findings`}>
+          {findings.length === 0 ? (
+            <p>No findings yet</p>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      ref={selectAllFindingsRef}
+                      type="checkbox"
+                      checked={allFindingsSelected}
+                      onChange={(event) =>
+                        handleToggleAllFindings(event.target.checked)
+                      }
+                      aria-label="Toggle redaction for all findings"
+                      title="Toggle redaction for all findings"
+                    />
+                  </th>
+                  <th>Entity type</th>
+                  <th>Text</th>
+                  <th>Confidence</th>
+                  <th>Recognizer</th>
+                  <th>Pattern name</th>
+                  <th>Pattern</th>
+                </tr>
+              </thead>
+              <tbody>
+                {findings.map((finding, index) => (
+                  <tr key={`${finding.id}-${index}`}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={entityToggles[finding.id] !== false}
+                        onChange={(event) =>
+                          handleFindingToggle(finding.id, event.target.checked)
+                        }
+                        aria-label={`Toggle redaction for ${
+                          finding.entityType || finding.recognizer || "entity"
+                        }`}
+                      />
+                    </td>
+                    <td>{finding.entityType}</td>
+                    <td>{finding.text}</td>
+                    <td>{formatConfidence(finding.confidence)}</td>
+                    <td>{finding.recognizer || "—"}</td>
+                    <td>{finding.patternName || "—"}</td>
+                    <td className="code-cell">{finding.pattern || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <aside
+          className={`sidebar expandable anonymizer-settings`}
+          style={{ minWidth: "0" }}
+        >
+          <div className="settings-group sidebar-group">
+            <input
+              type="checkbox"
+              id="saved-presets"
+              checked={openFilters.includes("saved-presets")}
+              onChange={handleOpenFilterToggle.bind(null, "saved-presets")}
+            />
+            <label className="settings-label" htmlFor="saved-presets">
+              <strong>Saved presets</strong>
+              <svg className="icon chevron">
                 <use xlinkHref="/images/icons.svg#chevron-down" />
               </svg>
-              <input
-                type="text"
-                className="prepend-icon"
-                placeholder="Search past anonymizations"
-                value={savedSearchQuery}
-                onChange={handleSavedSearchChange}
-                onFocus={handleSavedSearchFocus}
-                aria-expanded={suggestionsOpen}
-              />
-            </div>
-            <div
-              className="panel"
-              style={{ display: suggestionsOpen ? "block" : "none" }}
-            >
-              <ul>{suggestionPanelItems}</ul>
-            </div>
-          </div>
-        </div>
-        {displayHtml ? (
-          <div className="editor-wrapper">
-            <div className="editor-toolbar">
-              <button type="button" onClick={handleCopyHtml}>
-                {copiedHTML ? (
-                  <>
-                    <svg
-                      className="icon"
-                      style={{ marginRight: ".2rem", transform: "scale(0.9)" }}
-                    >
-                      <use xlinkHref="/images/icons.svg#check" />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="icon"
-                      style={{ marginRight: ".2rem", transform: "scale(0.9)" }}
-                    >
-                      <use xlinkHref="/images/icons.svg#content-copy" />
-                    </svg>
-                    Copy HTML
-                  </>
-                )}
-              </button>
-              <div className="divider" />
-              <button type="button" onClick={handleCopyPlainText}>
-                {copiedPlainText ? (
-                  <>
-                    <svg
-                      className="icon"
-                      style={{ marginRight: ".2rem", transform: "scale(0.9)" }}
-                    >
-                      <use xlinkHref="/images/icons.svg#check" />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="icon"
-                      style={{ marginRight: ".2rem", transform: "scale(0.9)" }}
-                    >
-                      <use xlinkHref="/images/icons.svg#content-copy" />
-                    </svg>
-                    Copy plain text
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="editor-content">
-              <div
-                ref={editorContentRef}
-                contentEditable={false}
-                dangerouslySetInnerHTML={{ __html: displayHtml }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="pre-result">
-            <img src="/images/face.svg" /><br />
-            Run the anonymizer to see the generated markup preserving output.
-          </div>
-        )}
-
-        <div className={`fetching ${isSubmitting ? "active" : ""}`}>
-          <div className="spinner" style={{ position: "absolute" }}>
-            <svg viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="20" />
-            </svg>
-          </div>
-        </div>
-      </section>
-
-      <section className="anonymizer-findings">
-        {findings.length === 0 ? (
-          <p>No findings yet</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Redact</th>
-                <th>Entity type</th>
-                <th>Text</th>
-                <th>Confidence</th>
-                <th>Recognizer</th>
-                <th>Pattern name</th>
-                <th>Pattern</th>
-              </tr>
-            </thead>
-            <tbody>
-              {findings.map((finding, index) => (
-                <tr key={`${finding.id}-${index}`}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={entityToggles[finding.id] !== false}
-                      onChange={(event) =>
-                        handleFindingToggle(finding.id, event.target.checked)
-                      }
-                      aria-label={`Toggle redaction for ${
-                        finding.entityType || finding.recognizer || "entity"
-                      }`}
-                    />
-                  </td>
-                  <td>{finding.entityType}</td>
-                  <td>{finding.text}</td>
-                  <td>{formatConfidence(finding.confidence)}</td>
-                  <td>{finding.recognizer || "—"}</td>
-                  <td>{finding.patternName || "—"}</td>
-                  <td className="code-cell">{finding.pattern || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <aside
-        className="sidebar expandable anonymizer-settings"
-        style={{ minWidth: "0" }}
-      >
-        <div className="settings-group sidebar-group">
-          <input
-            type="checkbox"
-            id="ner-model"
-            checked={openFilters.includes("ner-model")}
-            onChange={handleOpenFilterToggle.bind(null, "ner-model")}
-          />
-          <label className="settings-label" htmlFor="ner-model">
-            <strong>NER model</strong>
-          </label>
-          <div className="sidebar-group-content">
-            <select
-              id="ner-model"
-              value={nerModel}
-              onChange={(event) => {
-                localStorage.setItem("preferredNerModel", event.target.value);
-                setNerModel(event.target.value);
-              }}
-            >
-              {NER_MODEL_OPTIONS.map((option) => (
-                <option
-                  key={option.value}
-                  value={option.value}
-                  disabled={option.disabled}
-                >
-                  {option.label}
+            </label>
+            <div className="sidebar-group-content">
+              <select
+                id="saved-presets-select"
+                aria-label="Saved presets"
+                value={selectedPresetId}
+                onChange={(event) => setSelectedPresetId(event.target.value)}
+                disabled={isFetchingPresets || presets.length === 0}
+              >
+                <option value="">
+                  {isFetchingPresets ? "Loading presets…" : "Select a preset"}
                 </option>
-              ))}
-            </select>
-          </div>
-        </div>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={String(preset.id)}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <div className="preset-actions">
+                <button
+                  type="button"
+                  className="small"
+                  onClick={handlePresetSave}
+                  disabled={isPersistingPreset}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="primary small"
+                  onClick={handlePresetLoad}
+                  disabled={
+                    isPersistingPreset || isFetchingPresets || !selectedPreset
+                  }
+                >
+                  Load
+                </button>
 
-        <div className="settings-group sidebar-group">
-          <input
-            type="checkbox"
-            id="acceptance-threshold"
-            checked={openFilters.includes("acceptance-threshold")}
-            onChange={handleOpenFilterToggle.bind(null, "acceptance-threshold")}
-          />
-          <label className="settings-label" htmlFor="acceptance-threshold">
-            <svg className="icon chevron">
-              <use xlinkHref="/images/icons.svg#chevron-down" />
-            </svg>
-            <strong>Acceptance threshold</strong>
-          </label>
-          <div className="sidebar-group-content threshold-control">
+                <div className="spacer" />
+
+                <button
+                  type="button"
+                  className="negative small"
+                  onClick={handlePresetDelete}
+                  disabled={
+                    isPersistingPreset || isFetchingPresets || !selectedPreset
+                  }
+                  style={{ marginRight: "0" }}
+                >
+                  Delete
+                </button>
+              </div>
+              {presetErrorMessage && (
+                <small className="settings-help error">
+                  {presetErrorMessage}
+                </small>
+              )}
+              {!presetErrorMessage && presetStatusMessage && (
+                <small className="settings-help">{presetStatusMessage}</small>
+              )}
+            </div>
+          </div>
+
+          <div className="settings-group sidebar-group">
             <input
-              id="acceptance-threshold"
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={threshold}
-              onChange={(event) => {
-                const nextValue = parseFloat(event.target.value);
-                setThreshold(Number.isNaN(nextValue) ? 0 : nextValue);
-              }}
+              type="checkbox"
+              id="ner-model"
+              checked={openFilters.includes("ner-model")}
+              onChange={handleOpenFilterToggle.bind(null, "ner-model")}
             />
-            <output htmlFor="acceptance-threshold">
-              {threshold.toFixed(2)}
-            </output>
-          </div>
-        </div>
-
-        <div className="settings-group sidebar-group">
-          <input
-            type="checkbox"
-            id="allowlist"
-            checked={openFilters.includes("allowlist")}
-            onChange={handleOpenFilterToggle.bind(null, "allowlist")}
-          />
-          <label className="settings-label" htmlFor="allowlist">
-            <svg className="icon chevron">
-              <use xlinkHref="/images/icons.svg#chevron-down" />
-            </svg>
-            <strong>Allowlist</strong>
-          </label>
-          <div className="sidebar-group-content">
-            <textarea
-              id="allowlist"
-              rows={6}
-              placeholder="Comma or newline separated"
-              value={allowlistText}
-              onChange={(event) => setAllowlistText(event.target.value)}
-            />
-            <small className="settings-help">
-              Matching terms remain visible.
-            </small>
-          </div>
-        </div>
-
-        <div className="settings-group sidebar-group">
-          <input
-            type="checkbox"
-            id="denylist"
-            checked={openFilters.includes("denylist")}
-            onChange={handleOpenFilterToggle.bind(null, "denylist")}
-          />
-          <label className="settings-label" htmlFor="denylist">
-            <svg className="icon chevron">
-              <use xlinkHref="/images/icons.svg#chevron-down" />
-            </svg>
-            <strong>Denylist</strong>
-          </label>
-          <div className="sidebar-group-content">
-            <textarea
-              id="denylist"
-              rows={6}
-              placeholder="Comma or newline separated"
-              value={denylistText}
-              onChange={(event) => setDenylistText(event.target.value)}
-            />
-            <small className="settings-help">
-              Matching terms are always redacted.
-            </small>
-          </div>
-        </div>
-
-        <div className="settings-group sidebar-group">
-          <input
-            type="checkbox"
-            id="entity-types"
-            checked={openFilters.includes("entity-types")}
-            onChange={handleOpenFilterToggle.bind(null, "entity-types")}
-          />
-          <label className="settings-label" htmlFor="entity-types">
-            <svg className="icon chevron">
-              <use xlinkHref="/images/icons.svg#chevron-down" />
-            </svg>
-            <strong>Entity types</strong>
-          </label>
-          <div className="sidebar-group-content">
-            <form
-              className="group"
-              onSubmit={(event) => event.preventDefault()}
-            >
-              <svg className="icon">
-                <use xlinkHref="/images/icons.svg#search" />
+            <label className="settings-label" htmlFor="ner-model">
+              <strong>NER model</strong>
+              <svg className="icon chevron">
+                <use xlinkHref="/images/icons.svg#chevron-down" />
               </svg>
-              <input
-                type="text"
-                className="prepend-icon"
-                placeholder="Filter entity types"
-                value={entityTypeFilter}
+            </label>
+
+            <div className="sidebar-group-content">
+              <select
+                id="ner-model"
+                value={nerModel}
                 onChange={(event) => {
-                  setEntityTypeFilter(event.target.value);
-                  setMoreEntityOptions(false);
+                  localStorage.setItem("preferredNerModel", event.target.value);
+                  setNerModel(event.target.value);
+                }}
+              >
+                {NER_MODEL_OPTIONS.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={option.disabled}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="settings-group sidebar-group">
+            <input
+              type="checkbox"
+              id="acceptance-threshold"
+              checked={openFilters.includes("acceptance-threshold")}
+              onChange={handleOpenFilterToggle.bind(
+                null,
+                "acceptance-threshold",
+              )}
+            />
+            <label className="settings-label" htmlFor="acceptance-threshold">
+              <strong>
+                Acceptance threshold
+                {!openFilters.includes("acceptance-threshold") && (
+                  <>
+                    {" "}
+                    <span className="tag black">{threshold.toFixed(2)}</span>
+                  </>
+                )}
+              </strong>
+              <svg className="icon chevron">
+                <use xlinkHref="/images/icons.svg#chevron-down" />
+              </svg>
+            </label>
+            <div className="sidebar-group-content threshold-control">
+              <input
+                id="acceptance-threshold"
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={threshold}
+                onChange={(event) => {
+                  const nextValue = parseFloat(event.target.value);
+                  setThreshold(Number.isNaN(nextValue) ? 0 : nextValue);
                 }}
               />
-            </form>
-            <ul className="checkboxes settings-checkbox-list">
-              {displayedEntityOptions.map((option) => (
-                <li
-                  key={option.value}
-                  style={{
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                    overflow: "hidden",
+              <output htmlFor="acceptance-threshold">
+                {threshold.toFixed(2)}
+              </output>
+            </div>
+          </div>
+
+          <div className="settings-group sidebar-group">
+            <input
+              type="checkbox"
+              id="entity-types"
+              checked={openFilters.includes("entity-types")}
+              onChange={handleOpenFilterToggle.bind(null, "entity-types")}
+            />
+            <label className="settings-label" htmlFor="entity-types">
+              <strong>
+                Entity types
+                {selectedEntityTypeCount > 0 && (
+                  <>
+                    {" "}
+                    <span className="tag blue">{selectedEntityTypeCount}</span>
+                  </>
+                )}
+              </strong>
+              <svg className="icon chevron">
+                <use xlinkHref="/images/icons.svg#chevron-down" />
+              </svg>
+            </label>
+            <div className="sidebar-group-content">
+              <form
+                className="group"
+                onSubmit={(event) => event.preventDefault()}
+              >
+                <svg className="icon">
+                  <use xlinkHref="/images/icons.svg#search" />
+                </svg>
+                <input
+                  type="text"
+                  className="prepend-icon"
+                  placeholder="Filter entity types"
+                  value={entityTypeFilter}
+                  onChange={(event) => {
+                    setEntityTypeFilter(event.target.value);
+                    setMoreEntityOptions(false);
                   }}
-                >
-                  <input
-                    type="checkbox"
-                    id={`entity-type-${option.value}`}
-                    checked={entityTypeSelection[option.value] !== false}
-                    onChange={(event) =>
-                      setEntityTypeSelection((previous) => ({
-                        ...previous,
-                        [option.value]: event.target.checked,
-                      }))
-                    }
-                  />
-                  <label
-                    htmlFor={`entity-type-${option.value}`}
-                    className="settings-checkbox"
-                  >
-                    {option.displayLabel}
-                    <span style={{ marginLeft: "0.4em", opacity: 0.7 }}>
-                      ({option.displayValue})
-                    </span>
-                  </label>
-                </li>
-              ))}
-              {displayedEntityOptions.length === 0 && (
-                <li key="no-entity-matches" className="empty">
-                  No matching entity types
-                </li>
-              )}
-              {shouldShowMoreEntityOptions && (
-                <li key="more-entity-options">
-                  <a
-                    href="#more-entity-options"
-                    tabIndex={0}
-                    role="button"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      setMoreEntityOptions(true);
+                />
+              </form>
+              <ul className="checkboxes settings-checkbox-list">
+                {displayedEntityOptions.map((option) => (
+                  <li
+                    key={option.value}
+                    style={{
+                      whiteSpace: "nowrap",
+                      textOverflow: "ellipsis",
+                      overflow: "hidden",
                     }}
                   >
-                    More options
-                  </a>
-                </li>
-              )}
-              {moreEntityOptions &&
-                filteredEntityOptions.length > INITIAL_ENTITY_DISPLAY_LIMIT && (
-                  <li key="less-entity-options">
+                    <input
+                      type="checkbox"
+                      id={`entity-type-${option.value}`}
+                      checked={entityTypeSelection[option.value] !== false}
+                      onChange={(event) =>
+                        setEntityTypeSelection((previous) => ({
+                          ...previous,
+                          [option.value]: event.target.checked,
+                        }))
+                      }
+                    />
+                    <label
+                      htmlFor={`entity-type-${option.value}`}
+                      className="settings-checkbox"
+                      title={`${option.displayLabel} (${option.displayValue})`}
+                    >
+                      {option.displayLabel}
+                      <span style={{ marginLeft: "0.4em", opacity: 0.7 }}>
+                        ({option.displayValue})
+                      </span>
+                    </label>
+                  </li>
+                ))}
+                {displayedEntityOptions.length === 0 && (
+                  <li key="no-entity-matches" className="empty">
+                    No matching entity types
+                  </li>
+                )}
+                {shouldShowMoreEntityOptions && (
+                  <li key="more-entity-options" className="more-entity-options">
                     <a
-                      href="#less-entity-options"
+                      href="#select-deselect-all"
                       tabIndex={0}
                       role="button"
                       onClick={(event) => {
                         event.preventDefault();
-                        setMoreEntityOptions(false);
+                        handleEntityTypeToggleAll();
                       }}
                     >
-                      Less options
+                      {entityTypeToggleLabel}
+                    </a>
+                    <a
+                      href="#more-entity-options"
+                      tabIndex={0}
+                      role="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setMoreEntityOptions(true);
+                      }}
+                    >
+                      More options
                     </a>
                   </li>
                 )}
-            </ul>
-          </div>
-        </div>
-        <div className="settings-group sidebar-group">
-          <input
-            type="checkbox"
-            id="saved-presets"
-            checked={openFilters.includes("saved-presets")}
-            onChange={handleOpenFilterToggle.bind(null, "saved-presets")}
-          />
-          <label className="settings-label" htmlFor="saved-presets">
-            <svg className="icon chevron">
-              <use xlinkHref="/images/icons.svg#chevron-down" />
-            </svg>
-            <strong>Saved presets</strong>
-          </label>
-          <div className="sidebar-group-content">
-            <select
-              id="saved-presets-select"
-              aria-label="Saved presets"
-              value={selectedPresetId}
-              onChange={(event) => setSelectedPresetId(event.target.value)}
-              disabled={isFetchingPresets || presets.length === 0}
-            >
-              <option value="">
-                {isFetchingPresets ? "Loading presets…" : "Select a preset"}
-              </option>
-              {presets.map((preset) => (
-                <option key={preset.id} value={String(preset.id)}>
-                  {preset.name}
-                </option>
-              ))}
-            </select>
-            <div className="preset-actions">
-              <button
-                type="button"
-                className="small"
-                onClick={handlePresetSave}
-                disabled={isPersistingPreset}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                className="primary small"
-                onClick={handlePresetLoad}
-                disabled={
-                  isPersistingPreset || isFetchingPresets || !selectedPreset
-                }
-              >
-                Load
-              </button>
-
-              <div className="spacer" />
-
-              <button
-                type="button"
-                className="negative small"
-                onClick={handlePresetDelete}
-                disabled={
-                  isPersistingPreset || isFetchingPresets || !selectedPreset
-                }
-                style={{ marginRight: "0" }}
-              >
-                Delete
-              </button>
+                {moreEntityOptions &&
+                  filteredEntityOptions.length >
+                    INITIAL_ENTITY_DISPLAY_LIMIT && (
+                    <li
+                      key="less-entity-options"
+                      className="less-entity-options"
+                    >
+                      <a
+                        href="#select-deselect-all"
+                        tabIndex={0}
+                        role="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          handleEntityTypeToggleAll();
+                        }}
+                      >
+                        {entityTypeToggleLabel}
+                      </a>
+                      <a
+                        href="#less-entity-options"
+                        tabIndex={0}
+                        role="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          setMoreEntityOptions(false);
+                        }}
+                      >
+                        Less options
+                      </a>
+                    </li>
+                  )}
+              </ul>
             </div>
-            {presetErrorMessage && (
-              <small className="settings-help error">
-                {presetErrorMessage}
-              </small>
-            )}
-            {!presetErrorMessage && presetStatusMessage && (
-              <small className="settings-help">{presetStatusMessage}</small>
-            )}
           </div>
-        </div>
-      </aside>
+
+          <div className="settings-group sidebar-group">
+            <input
+              type="checkbox"
+              id="allowlist"
+              checked={openFilters.includes("allowlist")}
+              onChange={handleOpenFilterToggle.bind(null, "allowlist")}
+            />
+            <label className="settings-label" htmlFor="allowlist">
+              <strong>
+                Allowlist
+                {allowlistCount > 0 && (
+                  <>
+                    {" "}
+                    <span className="tag green">{allowlistCount}</span>
+                  </>
+                )}
+              </strong>
+              <svg className="icon chevron">
+                <use xlinkHref="/images/icons.svg#chevron-down" />
+              </svg>
+            </label>
+            <div className="sidebar-group-content">
+              <textarea
+                id="allowlist"
+                rows={6}
+                placeholder="Comma or newline separated"
+                value={allowlistText}
+                onChange={(event) => setAllowlistText(event.target.value)}
+              />
+              <small className="settings-help">
+                Matching terms remain visible.
+              </small>
+            </div>
+          </div>
+
+          <div className="settings-group sidebar-group">
+            <input
+              type="checkbox"
+              id="denylist"
+              checked={openFilters.includes("denylist")}
+              onChange={handleOpenFilterToggle.bind(null, "denylist")}
+            />
+            <label className="settings-label" htmlFor="denylist">
+              <strong>
+                Denylist
+                {denylistCount > 0 && (
+                  <>
+                    {" "}
+                    <span className="tag red">{denylistCount}</span>
+                  </>
+                )}
+              </strong>
+              <svg className="icon chevron">
+                <use xlinkHref="/images/icons.svg#chevron-down" />
+              </svg>
+            </label>
+            <div className="sidebar-group-content">
+              <textarea
+                id="denylist"
+                rows={6}
+                placeholder="Comma or newline separated"
+                value={denylistText}
+                onChange={(event) => setDenylistText(event.target.value)}
+              />
+              <small className="settings-help">
+                Matching terms are always redacted.
+              </small>
+            </div>
+          </div>
+        </aside>
+      </main>
     </>
   );
 };
