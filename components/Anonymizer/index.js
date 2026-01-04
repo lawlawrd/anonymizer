@@ -28,9 +28,6 @@ const THEME_STORAGE_KEY = "anonymizerTheme";
 const THEME_LIGHT = "light";
 const THEME_DARK = "dark";
 
-const SUGGESTION_DEBOUNCE_MS = 300;
-const SUGGESTION_LIMIT = 10;
-
 const stableStringify = (value) => {
   if (value === null) {
     return "null";
@@ -485,14 +482,8 @@ const Anonymizer = () => {
     entities: [],
     items: [],
   });
-  const [currentAnonymizationPayload, setCurrentAnonymizationPayload] =
-    useState(null);
-  const [currentResultSignature, setCurrentResultSignature] = useState("");
-  const [lastSavedSignature, setLastSavedSignature] = useState("");
-  const [isSavingAnonymization, setIsSavingAnonymization] = useState(false);
   const [saveStatusMessage, setSaveStatusMessage] = useState("");
   const [saveErrorMessage, setSaveErrorMessage] = useState("");
-  const [savedSearchQuery, setSavedSearchQuery] = useState("");
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [editorOverride, setEditorOverride] = useState(null);
   const [openFilters, setOpenFilters] = useState(
@@ -522,7 +513,6 @@ const Anonymizer = () => {
   const savedSuggestionsControllerRef = useRef(null);
   const savedSuggestionsDebounceRef = useRef(null);
   const suggestionsContainerRef = useRef(null);
-  const initialSuggestionsLoadedRef = useRef(false);
 
   const selectedModel = useMemo(
     () =>
@@ -708,65 +698,6 @@ const Anonymizer = () => {
     };
   }, [presetStatusMessage]);
 
-  const fetchSavedSuggestions = useCallback((query) => {
-    if (savedSuggestionsControllerRef.current) {
-      savedSuggestionsControllerRef.current.abort();
-      savedSuggestionsControllerRef.current = null;
-    }
-
-    const controller = new AbortController();
-    savedSuggestionsControllerRef.current = controller;
-
-    const params = new URLSearchParams();
-    params.set("limit", String(SUGGESTION_LIMIT));
-    if (query && query.trim()) {
-      params.set("q", query.trim());
-    }
-
-    fetch(`${API_ROUTES.saved}?${params.toString()}`, {
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (controller.signal.aborted) return null;
-        if (!response.ok) {
-          throw new Error(`Saved search failed with status ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (!data || controller.signal.aborted) return;
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) return;
-        console.error("Failed to load saved anonymizations", error);
-      })
-      .finally(() => {
-        savedSuggestionsControllerRef.current = null;
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!initialSuggestionsLoadedRef.current) {
-      initialSuggestionsLoadedRef.current = true;
-      fetchSavedSuggestions(savedSearchQuery);
-      return;
-    }
-
-    if (typeof window === "undefined") {
-      fetchSavedSuggestions(savedSearchQuery);
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      fetchSavedSuggestions(savedSearchQuery);
-    }, SUGGESTION_DEBOUNCE_MS);
-
-    savedSuggestionsDebounceRef.current = timeout;
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [savedSearchQuery, fetchSavedSuggestions]);
 
   useEffect(() => {
     return () => {
@@ -836,11 +767,6 @@ const Anonymizer = () => {
     };
   }, [helpDialogActive]);
 
-  useEffect(() => {
-    if (savedSearchQuery.trim().length > 0) {
-      setSuggestionsOpen(true);
-    }
-  }, [savedSearchQuery]);
 
   const localizeEntityPlaceholders = useCallback(
     (input) => {
@@ -1052,10 +978,7 @@ const Anonymizer = () => {
         setLastSubmittedHtml(submission.html);
         setEntityToggles(initialToggles);
         setDisplayHtml(anonymizedHtml);
-        setCurrentAnonymizationPayload(payload);
         const signature = buildResultSignature(payload);
-        setCurrentResultSignature(signature);
-        setLastSavedSignature("");
         setStatusMessage("Done!");
       } catch (error) {
         console.error(error);
@@ -1202,9 +1125,6 @@ const Anonymizer = () => {
         };
 
         const signature = buildResultSignature(payload);
-        setCurrentAnonymizationPayload(payload);
-        setCurrentResultSignature(signature);
-        setLastSavedSignature(signature);
         setSaveStatusMessage("Loaded saved anonymization.");
       } catch (error) {
         console.error("Failed to load anonymization", error);
@@ -1241,13 +1161,9 @@ const Anonymizer = () => {
     setDenylistText("");
     setNerModel(DEFAULT_NER_MODEL);
     setEntityTypeSelection(buildDefaultEntityTypeSelection());
-    setCurrentAnonymizationPayload(null);
-    setCurrentResultSignature("");
-    setLastSavedSignature("");
     setSaveStatusMessage("");
     setSaveErrorMessage("");
     setSuggestionsOpen(false);
-    setIsSavingAnonymization(false);
   }, []);
 
   useEffect(() => {
