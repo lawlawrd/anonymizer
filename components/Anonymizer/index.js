@@ -2297,7 +2297,7 @@ const Anonymizer = () => {
               <p>
                 You can run the Anonymizer locally via Docker:
                 <br />
-                <code>docker run -p 3000:3000 lawlawrd/anonymizer</code>
+                <code>docker run -p 9628:9628 lawlawrd/anonymizer</code>
               </p>
 
               <h3>Understanding the results</h3>
@@ -2348,6 +2348,7 @@ const Anonymizer = () => {
                 </a>
                 .
               </p>
+              <p>This project is available under the MIT License.</p>
 
               <p style={{ textAlign: "center" }}>
                 <a href="https://lawlaw.law" id="brand">
