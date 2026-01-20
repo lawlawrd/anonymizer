@@ -43,6 +43,136 @@ const parseListInput = (input) => {
 
 const buildTermSet = (input) => new Set(parseListInput(input));
 
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const buildOperators = ({
+  deidentificationType,
+  maskCharCount,
+  maskChar,
+  encryptKey,
+}) => {
+  const normalizedType =
+    typeof deidentificationType === "string"
+      ? deidentificationType.trim().toLowerCase()
+      : "replace";
+
+  if (normalizedType === "redact") {
+    return { DEFAULT: { type: "redact" } };
+  }
+
+  if (normalizedType === "mask") {
+    const parsedCount =
+      typeof maskCharCount === "number"
+        ? maskCharCount
+        : Number.parseInt(maskCharCount, 10);
+    const charCount = Number.isFinite(parsedCount) && parsedCount > 0
+      ? parsedCount
+      : 15;
+    const safeMaskChar =
+      typeof maskChar === "string" && maskChar.length > 0
+        ? maskChar.slice(0, 1)
+        : "*";
+    return {
+      DEFAULT: {
+        type: "mask",
+        masking_char: safeMaskChar,
+        chars_to_mask: charCount,
+        from_end: false,
+      },
+    };
+  }
+
+  if (normalizedType === "hash") {
+    return { DEFAULT: { type: "hash", hash_type: "sha256" } };
+  }
+
+  if (normalizedType === "encrypt") {
+    return {
+      DEFAULT: {
+        type: "encrypt",
+        key: typeof encryptKey === "string" ? encryptKey : "",
+      },
+    };
+  }
+
+  return null;
+};
+
+const highlightEntities = (text, entities) => {
+  if (typeof text !== "string" || text.length === 0) {
+    return "";
+  }
+
+  if (!Array.isArray(entities) || entities.length === 0) {
+    return text;
+  }
+
+  const sorted = [...entities]
+    .filter(
+      (entity) =>
+        typeof entity?.start === "number" &&
+        typeof entity?.end === "number" &&
+        entity.end > entity.start,
+    )
+    .sort((a, b) => b.start - a.start || b.end - a.end);
+
+  let output = text;
+  let lastStart = Infinity;
+
+  sorted.forEach((entity) => {
+    if (entity.end > lastStart) {
+      return;
+    }
+
+    const before = output.slice(0, entity.start);
+    const middle = output.slice(entity.start, entity.end);
+    const after = output.slice(entity.end);
+    output = `${before}<mark>${escapeHtml(middle)}</mark>${after}`;
+    lastStart = entity.start;
+  });
+
+  return output;
+};
+
+const redactEntities = (text, entities) => {
+  if (typeof text !== "string" || text.length === 0) {
+    return "";
+  }
+
+  if (!Array.isArray(entities) || entities.length === 0) {
+    return text;
+  }
+
+  const sorted = [...entities]
+    .filter(
+      (entity) =>
+        typeof entity?.start === "number" &&
+        typeof entity?.end === "number" &&
+        entity.end > entity.start,
+    )
+    .sort((a, b) => b.start - a.start || b.end - a.end);
+
+  let output = text;
+  let lastStart = Infinity;
+
+  sorted.forEach((entity) => {
+    if (entity.end > lastStart) {
+      return;
+    }
+
+    output = `${output.slice(0, entity.start)}${output.slice(entity.end)}`;
+    lastStart = entity.start;
+  });
+
+  return output;
+};
+
 const parseRequestedEntityTypes = (input) => {
   const values = Array.isArray(input) ? input : [input];
 
@@ -476,13 +606,26 @@ export const createAnonymizeRouter = ({ analyzerUrl, anonymizerUrl }) => {
 
   router.post(anonymizeRoute, async (req, res) => {
     const { text, language: requestedLanguage, nerModel } = req.body ?? {};
+    const deidentificationType =
+      typeof req.body?.deidentificationType === "string"
+        ? req.body.deidentificationType.trim().toLowerCase()
+        : "replace";
+    const operators = buildOperators({
+      deidentificationType,
+      maskCharCount: req.body?.maskCharCount,
+      maskChar: req.body?.maskChar,
+      encryptKey: req.body?.encryptKey,
+    });
+    const hasEntityTypes = Object.prototype.hasOwnProperty.call(
+      req.body ?? {},
+      "entityTypes",
+    );
     const requestedEntityTypes = parseRequestedEntityTypes(
       req.body?.entityTypes,
     );
-    const entityTypeFilterSet =
-      requestedEntityTypes.length > 0
-        ? new Set(requestedEntityTypes)
-        : null;
+    const entityTypeFilterSet = hasEntityTypes
+      ? new Set(requestedEntityTypes)
+      : null;
 
     const normalizedModel =
       typeof nerModel === "string" && nerModel in NER_MODEL_LANGUAGE_MAP
@@ -527,7 +670,7 @@ export const createAnonymizeRouter = ({ analyzerUrl, anonymizerUrl }) => {
       payload.ner_model = normalizedModel;
     }
 
-    if (entityTypeFilterSet) {
+    if (entityTypeFilterSet && entityTypeFilterSet.size > 0) {
       payload.entities = Array.from(entityTypeFilterSet);
     }
 
@@ -591,6 +734,24 @@ export const createAnonymizeRouter = ({ analyzerUrl, anonymizerUrl }) => {
         denylistEntities,
       );
 
+      if (deidentificationType === "highlight") {
+        res.json({
+          anonymizedText: highlightEntities(text, filteredAnalyzerResults),
+          items: [],
+          entities: filteredAnalyzerResults,
+        });
+        return;
+      }
+
+      if (deidentificationType === "redact") {
+        res.json({
+          anonymizedText: redactEntities(text, filteredAnalyzerResults),
+          items: [],
+          entities: filteredAnalyzerResults,
+        });
+        return;
+      }
+
       const anonymizerResponse = await fetch(
         `${anonymizerUrl.replace(/\/$/, "")}/anonymize`,
         {
@@ -601,6 +762,7 @@ export const createAnonymizeRouter = ({ analyzerUrl, anonymizerUrl }) => {
           body: JSON.stringify({
             text,
             analyzer_results: filteredAnalyzerResults,
+            ...(operators ? { operators, anonymizers: operators } : {}),
           }),
         },
       );

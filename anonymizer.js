@@ -17,7 +17,6 @@ app.use(express.json({ limit: "2mb" }));
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
-// Serve built assets (React bundle, compiled CSS, images, etc.)
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(
@@ -28,9 +27,8 @@ app.use(
   }),
 );
 
-// Root page that will host the Anonymizer React app.
 app.get(["/", "/anonymizer"], (_req, res) => {
-  res.render("template", { title: "Anonymizer by Law Law" });
+  res.render("template", { title: "Anonymizer" });
 });
 
 app.listen(PORT, HOST, () => {

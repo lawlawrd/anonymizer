@@ -12,6 +12,7 @@
   "author": "Ben van den Ende",
   "license": "MIT",
   "dependencies": {
+    "@reduxjs/toolkit": "^2.11.2",
     "@tiptap/core": "^2.6.6",
     "@tiptap/extension-blockquote": "^2.6.6",
     "@tiptap/extension-bold": "^2.6.6",
@@ -54,7 +55,8 @@
     "prosemirror-state": "^1.4.3",
     "pug": "^3.0.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-redux": "^9.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -52,6 +52,7 @@
     min-height: auto;
     padding: 0;
     min-height: calc(100vh - $headerHeight);
+    grid-auto-rows: min-content 1fr;
 
     & > .anonymizer-input {
       grid-column: 1 / 2;
@@ -64,6 +65,7 @@
       border-right: 1px solid $crust;
       transform: translateX(0);
       transition: 0.2s transform;
+      align-self: start;
 
       // &.sidebar-active {
       //   transform: translateX(-300px);
@@ -87,7 +89,7 @@
         }
       }
 
-      #anonymizer-editor {
+      #anonymizer-editor-input {
         grid-row: 2 / 3;
 
         [contenteditable="true"] {
@@ -107,6 +109,7 @@
       position: relative;
       transform: translateX(0);
       transition: 0.2s transform;
+      align-self: start;
 
       // &.sidebar-active {
       //   transform: translateX(-300px);
@@ -127,11 +130,9 @@
       }
 
       .pre-result {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
         text-align: center;
+        padding: 0 5em;
+        font-family: $utilityText;
 
         & > .emoji {
           font-size: 8rem;
@@ -140,9 +141,12 @@
         }
       }
 
-      .editor-content [contenteditable] {
-        min-height: 30em;
-        max-height: 50em;
+      & > #anonymizer-editor-output {
+        grid-row: 2 / 3;
+        .editor-content [contenteditable] {
+          min-height: 30em;
+          max-height: 50em;
+        }
       }
     }
 
@@ -153,10 +157,7 @@
       border-top: 1px solid $crust;
       transform: translateX(0);
       transition: 0.2s transform;
-
-      // &.sidebar-active {
-      //   transform: translateX(-300px);
-      // }
+      align-self: start;
 
       & > p {
         text-align: center;
@@ -171,6 +172,19 @@
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
         line-clamp: 2;
+      }
+
+      & > table {
+        & > thead {
+          & tr > th > span {
+            cursor: pointer;
+
+            &:hover,
+            &:focus {
+              text-decoration: underline solid $linkColor;
+            }
+          }
+        }
       }
     }
 
