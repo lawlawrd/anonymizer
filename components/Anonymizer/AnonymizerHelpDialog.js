@@ -39,9 +39,9 @@ const AnonymizerHelpDialog = () => {
           listed for future use.
         </p>
         <p>
-          You can run the Anonymizer locally via Docker:
-          <br />
-          <code>docker run -p 9628:9628 lawlawrd/anonymizer</code>
+          Run the web app locally with <code>npm run dev</code> and make sure
+          the Presidio Analyzer and Anonymizer APIs are reachable via
+          <code>PRESIDIO_ANALYZER_URL</code> and <code>PRESIDIO_ANONYMIZER_URL</code>.
         </p>
 
         <h3>Understanding the results</h3>

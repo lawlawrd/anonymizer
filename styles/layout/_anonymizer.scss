@@ -67,10 +67,6 @@
       transition: 0.2s transform;
       align-self: start;
 
-      // &.sidebar-active {
-      //   transform: translateX(-300px);
-      // }
-
       & > .header {
         grid-row: 1 / 2;
         font-family: $utilityText;
@@ -111,9 +107,6 @@
       transition: 0.2s transform;
       align-self: start;
 
-      // &.sidebar-active {
-      //   transform: translateX(-300px);
-      // }
 
       & > .header {
         font-family: $utilityText;
